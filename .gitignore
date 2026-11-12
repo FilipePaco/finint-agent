@@ -1,0 +1,22 @@
+# Enunciado do desafio (fica só local)
+11-aml-alert-investigation-agent.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Dados (datasets grandes não vão pro repo)
+data/raw/
+*.parquet
+*.csv.gz
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
