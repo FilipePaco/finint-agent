@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from finint.ml.metrics import budget_metrics, pr_auc, recall_by_group, top_k_mask
+from finint.ml.metrics import budget_metrics, pr_auc, pr_curve, recall_by_group, top_k_mask
 
 BUDGETS = (0.001, 0.005, 0.01)
 TYPOLOGY_BUDGET = 0.005
@@ -36,6 +36,7 @@ def _metrics(part: pd.DataFrame, split: str) -> dict[str, Any]:
         "n": len(part),
         "n_positive": int(labels.sum()),
         "pr_auc": pr_auc(labels, scores),
+        "pr_curve": pr_curve(labels, scores),
         "budgets": budget_metrics(labels, scores, BUDGETS),
         "typology_recall_at": f"{TYPOLOGY_BUDGET:.2%}",
         "typology_recall": {

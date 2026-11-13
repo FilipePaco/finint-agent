@@ -86,3 +86,19 @@ def budget_metrics(
         precision, recall = precision_recall_at_k(labels, scores, k)
         out[f"{budget:.2%}"] = {"k": k, "precision": precision, "recall": recall}
     return out
+
+
+def pr_curve(labels: Labels, scores: Array, points: int = 200) -> dict[str, list[float]]:
+    """Precision-recall curve downsampled to about ``points`` points (for reports)."""
+    y = np.asarray(labels, dtype=bool)
+    if not y.any():
+        return {"precision": [], "recall": []}
+    order = np.argsort(-np.asarray(scores, dtype=np.float64), kind="stable")
+    hits = np.cumsum(y[order])
+    flagged = np.arange(1, len(y) + 1)
+    # sample densely at the top of the ranking, where alert budgets live
+    idx = np.unique(np.geomspace(1, len(y), num=points).astype(np.int64) - 1)
+    return {
+        "precision": (hits[idx] / flagged[idx]).round(5).tolist(),
+        "recall": (hits[idx] / hits[-1]).round(5).tolist(),
+    }

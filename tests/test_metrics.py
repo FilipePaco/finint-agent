@@ -63,3 +63,16 @@ def test_pr_auc_matches_sklearn_including_ties(seed: int) -> None:
 
 def test_pr_auc_without_positives_is_zero() -> None:
     assert pr_auc(np.zeros(5, dtype=bool), np.arange(5.0)) == 0.0
+
+
+def test_pr_curve_is_dense_at_the_top_and_ends_at_full_recall() -> None:
+    from finint.ml.metrics import pr_curve
+
+    rng = np.random.default_rng(0)
+    labels = rng.random(10_000) < 0.01
+    scores = rng.random(10_000) + labels
+    curve = pr_curve(labels, scores, points=50)
+    assert curve["recall"][-1] == 1.0
+    assert curve["precision"][0] == 1.0
+    assert len(curve["recall"]) <= 50
+    assert curve["recall"] == sorted(curve["recall"])

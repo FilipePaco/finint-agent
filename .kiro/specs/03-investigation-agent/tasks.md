@@ -4,7 +4,7 @@ Write the tests in `test-strategy.md` before or alongside each core module.
 
 Core (framework-free, test first)
 - [ ] 3.1 `core/models.py`: Alert, Evidence, CaseFile, Disposition, AuditEvent, AnalystDecision · _R3.5, R3.8_
-- [ ] 3.2 `core/audit.py`: hash-chained append-only log + `AuditIntegrityError` + `make audit-verify` (**port from `pig_finserv/audit.py`**, swap triage fields for agent events) · _R3.12_
+- [x] 3.2 `core/audit.py`: hash-chained append-only log + `AuditIntegrityError` + `make audit-verify` (**port from `pig_finserv/audit.py`**, swap triage fields for agent events) · _R3.12_
 - [ ] 3.3 `core/minimize.py` + test that label columns never reach a prompt · _R3.9_
 - [ ] 3.4 `core/screening.py` + tests on `sanctions_cases.yaml` · _R3.4_
 - [ ] 3.5 `core/grounding.py` + property tests · _R3.5_
