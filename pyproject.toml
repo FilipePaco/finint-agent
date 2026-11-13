@@ -87,3 +87,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["finint.core.*", "finint.config"]
 strict = true
+
+[[tool.mypy.overrides]]
+# CI does not install the gnn group (torch), so nn.Module resolves to Any there.
+module = ["finint.ml.gnn"]
+disallow_subclassing_any = false
