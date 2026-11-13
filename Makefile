@@ -27,4 +27,5 @@ test: ## Unit tests (no network, no LLM)
 check: lint typecheck test ## Everything CI runs
 
 data: ## Build the data foundation in data/finint.duckdb (spec 01)
-	$(UV) run finint data ingest
+	$(UV) run finint data download
+	$(UV) run finint data build

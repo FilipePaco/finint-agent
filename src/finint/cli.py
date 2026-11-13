@@ -5,7 +5,6 @@ Commands are added as their specs are implemented. ``make`` targets wrap them.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -50,21 +49,30 @@ def info() -> None:
         typer.echo(f"{key.ljust(width)}  {value}")
 
 
-@data_app.command("ingest")
-def data_ingest(
-    raw_dir: Annotated[Path | None, typer.Option(help="Folder with the AMLworld files.")] = None,
+@data_app.command("download")
+def data_download(
+    variant: Annotated[str, typer.Option(help="AMLworld variant prefix.")] = "HI-Small",
+    force: Annotated[bool, typer.Option(help="Re-download files that already exist.")] = False,
+) -> None:
+    """Download the AMLworld files into data/raw (skips files already present)."""
+    from finint.data.download import download
+    from finint.data.sources import AmlWorldFiles
+
+    fetched = download(AmlWorldFiles.in_dir(get_settings().raw_dir, variant), force=force)
+    typer.echo("\n".join(f"downloaded {path}" for path in fetched) or "all files present")
+
+
+@data_app.command("build")
+def data_build(
     variant: Annotated[str, typer.Option(help="AMLworld variant prefix.")] = "HI-Small",
 ) -> None:
-    """Load AMLworld transactions, accounts and laundering patterns into DuckDB."""
-    from finint.data.ingest import ingest
-    from finint.data.sources import AmlWorldFiles, MissingRawDataError
+    """Rebuild data/finint.duckdb from the raw files (all spec-01 steps, in order)."""
+    from finint.data.build import build
+    from finint.data.sources import MissingRawDataError
 
-    settings = get_settings()
-    files = AmlWorldFiles.in_dir(raw_dir or settings.raw_dir, variant)
     try:
-        report = ingest(files, settings.duckdb_path)
+        report = build(get_settings(), variant, log=typer.echo)
     except MissingRawDataError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=2) from error
-    for key, value in report.model_dump().items():
-        typer.echo(f"{key}: {value}")
+    typer.echo(report.model_dump_json(indent=2))
