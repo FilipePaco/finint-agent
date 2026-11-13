@@ -249,15 +249,16 @@ def collect_scores(model: EdgeSAGE, batches: list[DayBatch], split: str) -> pd.D
 def train_gnn(
     batches: list[DayBatch],
     seed: int,
-    max_epochs: int = 8,
-    minibatch: int = 50_000,
+    max_epochs: int = 20,
+    minibatch: int = 20_000,
     pos_weight: float = 10.0,
+    lr: float = 3e-3,
     log: Callable[[str], None] = print,
 ) -> GnnResult:
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     model = EdgeSAGE(node_in=len(NODE_FEATURES), edge_in=len(NUMERIC))
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight))
     best_state, best_ap, best_epoch, history = None, -1.0, -1, []
     for epoch in range(1, max_epochs + 1):
