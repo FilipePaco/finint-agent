@@ -1,0 +1,40 @@
+# Bank-name prefix (as it appears in AMLworld "<Country> Bank #N") -> ISO code + Faker locale.
+# Banks without a country prefix ("Savings Bank of Houston") are US banks in the simulator.
+# "Crytpo" (sic, dataset typo) are crypto exchanges: no country; the entity takes the
+# country of its other accounts, or the default.
+default: United States
+no_country_prefixes: ["Crytpo"]
+countries:
+  United States: {iso2: US, locale: en_US}
+  Germany: {iso2: DE, locale: de_DE}
+  Switzerland: {iso2: CH, locale: de_CH}
+  China: {iso2: CN, locale: zh_CN}
+  France: {iso2: FR, locale: fr_FR}
+  India: {iso2: IN, locale: en_IN}
+  Israel: {iso2: IL, locale: he_IL}
+  UK: {iso2: GB, locale: en_GB}
+  Italy: {iso2: IT, locale: it_IT}
+  Japan: {iso2: JP, locale: ja_JP}
+  Spain: {iso2: ES, locale: es_ES}
+  Australia: {iso2: AU, locale: en_AU}
+  Canada: {iso2: CA, locale: en_CA}
+  Russia: {iso2: RU, locale: ru_RU}
+  Mexico: {iso2: MX, locale: es_MX}
+  Saudi Arabia: {iso2: SA, locale: ar_SA}
+  Netherlands: {iso2: NL, locale: nl_NL}
+  Brazil: {iso2: BR, locale: pt_BR}
+  Belgium: {iso2: BE, locale: nl_BE}
+  Austria: {iso2: AT, locale: de_AT}
+  Greece: {iso2: GR, locale: el_GR}
+  Portugal: {iso2: PT, locale: pt_PT}
+  Ireland: {iso2: IE, locale: en_IE}
+  Finland: {iso2: FI, locale: fi_FI}
+  Slovakia: {iso2: SK, locale: sk_SK}
+  Croatia: {iso2: HR, locale: hr_HR}
+  Lithuania: {iso2: LT, locale: lt_LT}
+  Slovenia: {iso2: SI, locale: sl_SI}
+  Estonia: {iso2: EE, locale: et_EE}
+  Latvia: {iso2: LV, locale: lv_LV}
+  Cyprus: {iso2: CY, locale: el_CY}
+  Malta: {iso2: MT, locale: en_GB}
+  Luxembourg: {iso2: LU, locale: fr_FR}

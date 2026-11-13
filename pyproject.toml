@@ -16,12 +16,16 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "pyyaml>=6.0.3",
     "typer>=0.29.1",
+    "unidecode>=1.4.0",
 ]
 
 [project.scripts]
 finint = "finint.cli:app"
 
 [dependency-groups]
+data = [
+    "faker>=40.54.0",
+]
 dev = [
     "hypothesis>=6.170.15",
     "mypy>=2.4.1",
