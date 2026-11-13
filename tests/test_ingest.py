@@ -104,5 +104,5 @@ def test_missing_files_explain_the_kaggle_download(tmp_path: Path) -> None:
     message = str(excinfo.value)
     assert "HI-Small_accounts.csv" in message
     assert "HI-Small_Patterns.txt" in message
-    assert "kaggle datasets download" in message
+    assert "finint data download" in message
     assert "HI-Small_Trans.csv," not in message
