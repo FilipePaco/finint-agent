@@ -30,8 +30,10 @@ data: ## Build the data foundation in data/finint.duckdb (spec 01)
 	$(UV) run finint data download
 	$(UV) run finint data build
 
-features: ## Build per-transaction features (spec 02)
+features: ## Build tabular and graph features (spec 02)
 	$(UV) run finint ml features
+	$(UV) run finint ml graph
 
 train: features ## Train and evaluate the detection models (spec 02)
 	$(UV) run finint ml train --model m0
+	$(UV) run finint ml train --model m1
