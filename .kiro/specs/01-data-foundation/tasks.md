@@ -5,7 +5,7 @@
 - [x] 1.1c GitHub Actions: `quality.yml` (ruff check, ruff format --check, mypy, pytest) and `security.yml` (pip-audit; **adapted from CantadasProject**) · _R1.1_
 - [x] 1.2 `data/ingest.py`: load HI-Small transactions + accounts into DuckDB with typed columns and `txn_id`; missing-file message with the Kaggle command · _R1.1_
 - [x] 1.3 Patterns parser + linker → `attempts`, `transactions.attempt_id/typology`; unmatched lines go to the data-quality report · _R1.1_
-- [ ] 1.4 FX table + `amount_usd`, `cross_currency`, `cross_bank`, `ts_shifted` · _R1.2_
+- [x] 1.4 FX table + `amount_usd`, `cross_currency`, `cross_bank`, `ts_shifted` · _R1.2_
 - [ ] 1.5 Synthetic identities (seeded Faker) · _R1.3_
 - [ ] 1.6 OFAC SDN loader with snapshot fallback + `data_sources` provenance · _R1.4_
 - [ ] 1.7 `sanctions_cases.yaml` (≥ 20 cases incl. ≥ 5 decoys) + injector · _R1.5_
