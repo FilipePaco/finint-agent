@@ -74,3 +74,4 @@ tables:
   injected_sanctions: {_all: forbidden} # ground truth
   injected_media: {_all: forbidden}     # ground truth
   injected_prompts: {_all: forbidden}   # ground truth
+  features_txn: {_all: allowed}         # model features; explain_alert exposes top contributors

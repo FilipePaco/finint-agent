@@ -114,6 +114,12 @@ def build_quality_report(db_path: Path, split: SplitBoundaries, variant: str) ->
         _table(["Date", "Transactions", "Laundering"], daily),
         "## Chronological split (60/20/20 by transaction count)",
         _table(["Split", "From", "To", "Transactions", "Laundering", "Rate"], splits),
+        (
+            f"Low-activity tail from **{split.tail_start:%Y-%m-%d}**: days below 1% of the "
+            "median daily volume. Primary test metrics exclude it (ADR-02.7)."
+            if split.tail_start
+            else "No low-activity tail detected."
+        ),
         "## Laundering by typology",
         "`UNLISTED` = laundering transactions that the patterns file does not list, so they "
         "have no typology. Per-typology recall uses listed transactions; overall recall uses all.",

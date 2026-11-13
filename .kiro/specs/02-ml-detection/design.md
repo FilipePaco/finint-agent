@@ -74,3 +74,7 @@ Each champion artifact ships `model_card.md` (pattern from `pig_finserv/modeling
 ### ADR-02.6 Split by transaction count, not by day (vs 60/20/20 of calendar days)
 **Decision:** chronological 60/20/20 by cumulative transaction count.
 **Why:** measured on the real data. The last 8 days are a ~1,100-row laundering tail, so a day-based split gives a degenerate test set. The count-based split matches the AMLworld paper's protocol, which makes results comparable.
+
+### ADR-02.7 Primary test metrics exclude the low-activity tail (vs full test split only)
+**Decision:** primary metrics use the test split minus days whose volume is below 1% of the median day; full-test metrics are reported next to them.
+**Why:** measured on M0. HI-Small's Sep 11–18 holds 1,108 transactions, 59% laundering, because background activity stops while attempts finish. On the tail alone M0 scores PR-AUC 0.96, which lifts full-test PR-AUC from 0.41 to 0.55 and precision@0.1% from 48% to 77%. These are artefacts of the simulator, not detection skill. The cut-off is computed from the data, not hard-coded.
