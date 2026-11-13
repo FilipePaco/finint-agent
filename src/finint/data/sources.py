@@ -35,12 +35,9 @@ class MissingRawDataError(FileNotFoundError):
 
     def __init__(self, missing: list[Path], raw_dir: Path) -> None:
         names = ", ".join(path.name for path in missing)
-        commands = "\n".join(
-            f"  kaggle datasets download -d {KAGGLE_DATASET} -f {path.name} -p {raw_dir} --unzip"
-            for path in missing
-        )
         super().__init__(
-            f"Missing raw AMLworld files: {names}\n"
-            f"Download them (needs a Kaggle account and API token):\n{commands}"
+            f"Missing raw AMLworld files in {raw_dir}: {names}\n"
+            "Download them (public, no account needed) with:\n"
+            "  finint data download"
         )
         self.missing = missing

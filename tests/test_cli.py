@@ -32,7 +32,14 @@ def test_info_never_prints_secret_values(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "google_api_key" in result.stdout
 
 
-def test_data_ingest_exits_2_with_download_hint_when_files_missing(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["data", "ingest", "--raw-dir", str(tmp_path)])
+def test_data_build_exits_2_with_download_hint_when_files_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("FININT_DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        result = runner.invoke(app, ["data", "build"])
+    finally:
+        get_settings.cache_clear()
     assert result.exit_code == 2
-    assert "kaggle datasets download" in result.output
+    assert "finint data download" in result.output
