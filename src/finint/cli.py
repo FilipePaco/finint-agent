@@ -115,15 +115,22 @@ def ml_graph(
 
 @ml_app.command("train")
 def ml_train(
-    model: Annotated[str, typer.Option(help="m0 = tabular baseline, m1 = tabular + graph.")] = "m0",
+    model: Annotated[
+        str, typer.Option(help="m0 = tabular, m1 = tabular + graph, m2 = GraphSAGE (GNN).")
+    ] = "m0",
 ) -> None:
-    """Train a model, pick class weight on validation, evaluate on test, save the artifact."""
+    """Train a model, select on validation, evaluate on test, save the artifact."""
     import json
 
+    if model == "m2":
+        _train_gnn()
+        return
+
+    from finint.ml.artifacts import model_version
     from finint.ml.dataset import load_frame
     from finint.ml.features import FEATURES
     from finint.ml.graph_features import GRAPH_FEATURES
-    from finint.ml.train import evaluate, model_version, save_artifact, train_lightgbm
+    from finint.ml.train import evaluate, save_artifact, train_lightgbm
 
     feature_sets = {"m0": list(FEATURES), "m1": [*FEATURES, *GRAPH_FEATURES]}
     if model not in feature_sets:
@@ -133,4 +140,20 @@ def ml_train(
     trained = train_lightgbm(frame, feature_sets[model], model, settings.seed, log=typer.echo)
     metrics = evaluate(trained, frame)
     path = save_artifact(trained, metrics, settings.artifacts_dir, model_version(model))
+    typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))
+
+
+def _train_gnn() -> None:
+    import json
+
+    # Never import finint.ml.train here: LightGBM's OpenMP next to PyTorch's segfaults.
+    from finint.ml.artifacts import model_version
+    from finint.ml.evaluation import evaluate_scores
+    from finint.ml.gnn import collect_scores, load_day_batches, save_gnn_artifact, train_gnn
+
+    settings = get_settings()
+    batches = load_day_batches(settings.duckdb_path, _split_boundaries(), log=typer.echo)
+    result = train_gnn(batches, settings.seed, log=typer.echo)
+    metrics = evaluate_scores(collect_scores(result.model, batches, "test"))
+    path = save_gnn_artifact(result, metrics, settings.artifacts_dir, model_version("m2"))
     typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))

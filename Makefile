@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test check data features train
+.PHONY: help install lint format typecheck test test-gnn check data features train
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -22,7 +22,10 @@ typecheck: ## mypy (strict on core/ and config)
 	$(UV) run mypy
 
 test: ## Unit tests (no network, no LLM)
-	$(UV) run pytest -m "not slow and not live"
+	$(UV) run pytest -m "not slow and not live and not gnn"
+
+test-gnn: ## GNN tests in their own process (needs: uv sync --group gnn)
+	$(UV) run pytest -m gnn tests/test_gnn.py  # only this file: collecting others loads LightGBM
 
 check: lint typecheck test ## Everything CI runs
 
