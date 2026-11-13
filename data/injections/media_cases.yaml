@@ -1,0 +1,55 @@
+# Adverse-media test entities (task 1.8 · R1.6, R3.3).
+#
+# Six FICTIONAL entities with invented names, attached to synthetic accounts in the test
+# window. Their news lives in data/fixtures/media/documents.yaml on the reserved
+# news.example domain. Web search never runs for real people: the media agent only
+# searches entities flagged as injected (R3.3), and in fixture mode it only reads these
+# documents.
+#
+# expected_media: what a correct media check should conclude for the entity.
+cases:
+  - id: MED-01
+    kind: person
+    role: subject
+    name: Orrin Castellane
+    country: United States
+    country_iso2: US
+    dob: 1979-04-22
+    expected_media: CHARGE
+  - id: MED-02
+    kind: company
+    role: subject
+    name: Velmora Freight Ltd
+    country: UK
+    country_iso2: GB
+    expected_media: ALLEGATION
+  - id: MED-03
+    kind: person
+    role: counterparty
+    name: Teodor Brannick
+    country: Germany
+    country_iso2: DE
+    dob: 1990-11-03
+    expected_media: SAME_NAME_DIFFERENT_ENTITY
+  - id: MED-04
+    kind: company
+    role: counterparty
+    name: Quillon Maritime Holdings
+    country: Netherlands
+    country_iso2: NL
+    expected_media: NONE
+  - id: MED-05
+    kind: person
+    role: subject
+    name: Ines Valtrecho
+    country: Portugal
+    country_iso2: PT
+    dob: 1971-08-15
+    expected_media: CONVICTION
+  - id: MED-06
+    kind: company
+    role: subject
+    name: Saltmarsh Ledger Partners
+    country: Ireland
+    country_iso2: IE
+    expected_media: SANCTION

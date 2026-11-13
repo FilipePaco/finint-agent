@@ -1,0 +1,12 @@
+# Benign synthetic payment memos (task 1.8 · R1.6). AMLworld has no free-text field, so
+# every transaction gets a deterministic memo from these templates, picked by txn_id.
+# Placeholders: {n} = 4-6 digit number derived from txn_id; {month} = month of ts.
+# These strings are UNTRUSTED input to the agent, like a real payment reference.
+templates:
+  Cheque: ["Cheque no. {n}", "Chq {n} - supplier", "Cheque payment ref {n}", "Rent {month}"]
+  Credit Card: ["Card settlement {n}", "POS purchase {n}", "Online order #{n}", "Subscription {month}"]
+  ACH: ["Payroll {month}", "INV-{n}", "Supplier payment PO-{n}", "Loan repayment {n}", "Utility bill {month}"]
+  Cash: ["Cash deposit", "Cash deposit branch {n}", "Over-the-counter cash"]
+  Reinvestment: ["Reinvestment of returns", "Dividend reinvestment {month}", "Portfolio rebalance {n}"]
+  Wire: ["Wire ref {n} - consulting services", "Intl transfer INV-{n}", "Trade settlement {n}", "Wire - goods shipment {n}"]
+  Bitcoin: ["BTC transfer {n}", "Wallet top-up {n}", "Exchange withdrawal {n}"]
