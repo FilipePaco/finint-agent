@@ -77,3 +77,28 @@ def test_train_and_evaluate_end_to_end(gnn: ModuleType, db: tuple[Path, SplitBou
     metrics = evaluate_scores(gnn.collect_scores(result.model, batches, "test"))
     assert 0.0 <= metrics["pr_auc"] <= 1.0
     assert metrics["n"] > 0
+
+
+def test_null_ratio_features_do_not_produce_nan(gnn: ModuleType, tmp_path: Path) -> None:
+    path, bounds = _fresh_db(tmp_path)
+    with duckdb.connect(str(path)) as con:
+        con.execute(
+            "UPDATE features_txn SET amount_vs_out_mean_7d = NULL, flow_through_ratio_24h = NULL "
+            "WHERE txn_id % 3 = 0"
+        )
+    batches = gnn.load_day_batches(path, bounds, log=lambda _m: None)
+    assert all(np.isfinite(b.edge_x.numpy()).all() for b in batches)
+    result = gnn.train_gnn(batches, seed=42, max_epochs=1, minibatch=500, log=lambda _m: None)
+    assert np.isfinite(result.history[0]["train_loss"])
+
+
+def _fresh_db(root: Path) -> tuple[Path, SplitBoundaries]:
+    write_dataset(root / "raw")
+    path = root / "finint.duckdb"
+    ingest(AmlWorldFiles.in_dir(root / "raw"), path)
+    normalize(path, date(2026, 11, 13), {"US Dollar": 1.0})
+    build_tabular_features(path)
+    build_graph_features(path, log=lambda _m: None)
+    with duckdb.connect(str(path), read_only=True) as con:
+        bounds = split_boundaries(con, SplitFractions(train=0.8, validation=0.1, test=0.1))
+    return path, bounds

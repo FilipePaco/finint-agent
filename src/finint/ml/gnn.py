@@ -81,8 +81,13 @@ def _standardize(
     values = np.log1p(np.clip(frame[columns].to_numpy(np.float64), 0, None))
     means = np.array([stats[c][0] for c in columns])
     stds = np.array([stats[c][1] for c in columns])
-    scaled: np.ndarray[Any, np.dtype[np.float32]] = ((values - means) / stds).astype(np.float32)
-    return scaled
+    scaled = (values - means) / stds
+    # Ratio features are NULL when a denominator is 0 (~4.7k rows in HI-Small). LightGBM
+    # handles NaN natively; a neural net does not, so impute the training mean (0 here).
+    clean: np.ndarray[Any, np.dtype[np.float32]] = np.nan_to_num(
+        scaled, nan=0.0, posinf=0.0, neginf=0.0
+    ).astype(np.float32)
+    return clean
 
 
 _DAY_TXNS = f"""
@@ -266,6 +271,8 @@ def train_gnn(
                 h = model.embed(day.x, day.edge_index)
                 logits = model(h, day.src[idx], day.dst[idx], day.edge_x[idx])
                 loss = loss_fn(logits, day.label[idx])
+                if not torch.isfinite(loss):
+                    raise FloatingPointError(f"non-finite loss on {day.day} (epoch {epoch})")
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
