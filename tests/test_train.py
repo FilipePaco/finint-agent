@@ -64,3 +64,20 @@ def test_model_version_format() -> None:
     assert name == "m1"
     assert sha
     assert len(stamp) == 8
+
+
+def test_m1_frame_includes_graph_columns(tmp_path_factory: pytest.TempPathFactory) -> None:
+    from finint.ml.graph_features import GRAPH_FEATURES, build_graph_features
+
+    root = tmp_path_factory.mktemp("m1")
+    write_dataset(root / "raw")
+    db = root / "finint.duckdb"
+    ingest(AmlWorldFiles.in_dir(root / "raw"), db)
+    normalize(db, date(2026, 11, 13), {"US Dollar": 1.0})
+    build_tabular_features(db)
+    build_graph_features(db, log=lambda _m: None)
+    with duckdb.connect(str(db), read_only=True) as con:
+        bounds = split_boundaries(con, SplitFractions(train=0.8, validation=0.1, test=0.1))
+    frame = load_frame(db, bounds, graph=True)
+    assert set(GRAPH_FEATURES) <= set(frame.columns)
+    assert all(str(frame[c].dtype) == "float32" for c in GRAPH_FEATURES)

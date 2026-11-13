@@ -102,22 +102,34 @@ def ml_features() -> None:
     typer.echo(f"features_txn rows: {build_tabular_features(get_settings().duckdb_path):,}")
 
 
+@ml_app.command("graph")
+def ml_graph(
+    window_days: Annotated[int, typer.Option(help="Closed days of history per graph.")] = 3,
+) -> None:
+    """Build graph features on sliding daily windows (graph_nodes, features_graph)."""
+    from finint.ml.graph_features import build_graph_features
+
+    rows = build_graph_features(get_settings().duckdb_path, window_days, log=typer.echo)
+    typer.echo(f"features_graph rows: {rows:,}")
+
+
 @ml_app.command("train")
 def ml_train(
-    model: Annotated[str, typer.Option(help="m0 = tabular baseline.")] = "m0",
+    model: Annotated[str, typer.Option(help="m0 = tabular baseline, m1 = tabular + graph.")] = "m0",
 ) -> None:
     """Train a model, pick class weight on validation, evaluate on test, save the artifact."""
     import json
 
     from finint.ml.dataset import load_frame
     from finint.ml.features import FEATURES
+    from finint.ml.graph_features import GRAPH_FEATURES
     from finint.ml.train import evaluate, model_version, save_artifact, train_lightgbm
 
-    feature_sets = {"m0": list(FEATURES)}
+    feature_sets = {"m0": list(FEATURES), "m1": [*FEATURES, *GRAPH_FEATURES]}
     if model not in feature_sets:
         raise typer.BadParameter(f"unknown model {model!r}; choose from {sorted(feature_sets)}")
     settings = get_settings()
-    frame = load_frame(settings.duckdb_path, _split_boundaries())
+    frame = load_frame(settings.duckdb_path, _split_boundaries(), graph=model == "m1")
     trained = train_lightgbm(frame, feature_sets[model], model, settings.seed, log=typer.echo)
     metrics = evaluate(trained, frame)
     path = save_artifact(trained, metrics, settings.artifacts_dir, model_version(model))
