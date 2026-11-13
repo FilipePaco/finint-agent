@@ -1,0 +1,27 @@
+# Single entry points (steering/tech.md). Targets are added as specs are implemented.
+.DEFAULT_GOAL := help
+UV ?= uv
+
+.PHONY: help install lint format typecheck test check
+
+help: ## List targets
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
+
+install: ## Create the venv with dev tools
+	$(UV) sync --group dev
+
+lint: ## Ruff lint + format check
+	$(UV) run ruff check .
+	$(UV) run ruff format --check .
+
+format: ## Auto-format and fix lint where safe
+	$(UV) run ruff format .
+	$(UV) run ruff check --fix .
+
+typecheck: ## mypy (strict on core/ and config)
+	$(UV) run mypy
+
+test: ## Unit tests (no network, no LLM)
+	$(UV) run pytest -m "not slow and not live"
+
+check: lint typecheck test ## Everything CI runs
