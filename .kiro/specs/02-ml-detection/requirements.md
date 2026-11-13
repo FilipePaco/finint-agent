@@ -6,7 +6,7 @@ Train a model that scores transactions for laundering risk, show that graph feat
 ## Requirements
 
 ### R2.1 Time-based split
-- THE SYSTEM SHALL split data chronologically into train / validation / test, with boundaries in `config/ml.yaml`. No random split anywhere.
+- THE SYSTEM SHALL split data chronologically into train / validation / test by cumulative transaction count (default 60/20/20, in `config/ml.yaml`). No random split anywhere.
 - THE SYSTEM SHALL compute every feature for a transaction only from data with timestamp ≤ that transaction (no future leakage). A test SHALL assert this on a fixture.
 
 ### R2.2 Tabular baseline
@@ -22,7 +22,7 @@ Train a model that scores transactions for laundering risk, show that graph feat
 - IF the GNN does not beat the graph-feature LightGBM THEN THE SYSTEM SHALL still report it honestly, and the champion is chosen by metrics, not by sophistication.
 
 ### R2.5 Metrics
-- THE SYSTEM SHALL report on the test split: PR-AUC, precision@k at the alert budget, recall@k, and **recall per typology** at the chosen threshold. Accuracy and ROC-AUC may appear only as secondary columns.
+- THE SYSTEM SHALL report on the test split: PR-AUC, precision@k at the alert budget, recall@k, and **recall per typology** at the chosen threshold, with laundering transactions absent from the patterns file reported as an `UNLISTED` group. Accuracy and ROC-AUC may appear only as secondary columns.
 - THE SYSTEM SHALL write `reports/ml_report.md` with a comparison table, PR curves and per-typology recall chart.
 
 ### R2.6 Calibration

@@ -24,8 +24,12 @@ transactions (DuckDB)
 - Cycles: bounded DFS (length ≤ 4) on the window graph, limited to nodes with in and out degree ≥ 1, to keep it tractable on 5M edges.
 - A property test samples transactions and recomputes their features from a truncated table (ts ≤ t) to assert equality.
 
-## Split (HI-Small ≈ 18 days, label rate ≈ 0.1%)
-Default: train = first 60% of days, val = next 20%, test = last 20%. Boundaries are printed with label counts per split. If any typology has < 10 positives in test, the report says so next to its recall.
+## Split (measured on real HI-Small, 2026-11-13)
+Observed: 5,078,345 transactions, 5,177 laundering (0.10%). Volume sits in **Sep 1–10**. Sep 11–18 hold only ~1,100 transactions, mostly laundering tails of earlier attempts. A split by calendar days would leave a tiny, almost all-positive test set.
+
+Decision: **chronological split by cumulative transaction count**: train = first 60% of transactions by `ts`, val = next 20%, test = last 20%. This is the convention of the AMLworld paper, and it keeps every split realistic in volume and label rate. Boundary timestamps and label/typology counts per split are printed and written to the ML report. If any typology has < 10 positives in test, the report says so next to its recall.
+
+Typology coverage: 1,968 of 5,177 laundering transactions (38%) are not listed in the patterns file, so they have no typology. Per-typology recall uses linked positives only, and the unlinked positives are reported as their own `UNLISTED` row. Overall recall uses all positives.
 
 ## Imbalance
 LightGBM `scale_pos_weight` tuned on val PR-AUC. GNN uses weighted BCE. No SMOTE: synthetic graph edges would corrupt the graph features.
@@ -66,3 +70,7 @@ Each champion artifact ships `model_card.md` (pattern from `pig_finserv/modeling
 ### ADR-02.5 No resampling (vs SMOTE / undersampling)
 **Decision:** class weights only.
 **Why:** synthetic minority samples would create transactions with no coherent graph neighborhood, corrupting graph features.
+
+### ADR-02.6 Split by transaction count, not by day (vs 60/20/20 of calendar days)
+**Decision:** chronological 60/20/20 by cumulative transaction count.
+**Why:** measured on the real data. The last 8 days are a ~1,100-row laundering tail, so a day-based split gives a degenerate test set. The count-based split matches the AMLworld paper's protocol, which makes results comparable.
