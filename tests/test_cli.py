@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -28,3 +30,9 @@ def test_info_never_prints_secret_values(monkeypatch: pytest.MonkeyPatch) -> Non
     assert result.exit_code == 0
     assert "do-not-leak-me" not in result.stdout
     assert "google_api_key" in result.stdout
+
+
+def test_data_ingest_exits_2_with_download_hint_when_files_missing(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["data", "ingest", "--raw-dir", str(tmp_path)])
+    assert result.exit_code == 2
+    assert "kaggle datasets download" in result.output

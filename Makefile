@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test check
+.PHONY: help install lint format typecheck test check data
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -25,3 +25,6 @@ test: ## Unit tests (no network, no LLM)
 	$(UV) run pytest -m "not slow and not live"
 
 check: lint typecheck test ## Everything CI runs
+
+data: ## Build the data foundation in data/finint.duckdb (spec 01)
+	$(UV) run finint data ingest
