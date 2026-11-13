@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -85,6 +86,7 @@ def _jsonable(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class AlertRun:
+    run_id: str
     model_version: str
     threshold: ThresholdChoice
     tradeoff: list[dict[str, Any]]
@@ -107,6 +109,7 @@ def generate_alerts(
     audit: AuditLog,
 ) -> AlertRun:
     """``frame`` must hold features, label, typology, split, in_tail, from_key, ts."""
+    run_id = f"alerts-{champion.version}-{datetime.now(UTC):%Y%m%dT%H%M%S}"
     period = frame[(frame["split"] != "train") & (~frame["in_tail"])].copy()
     period["raw"] = _score(champion, period)
     val_mask = period["split"] == "validation"
@@ -129,19 +132,24 @@ def generate_alerts(
     alerts = apply_threshold(all_ad, choice.threshold)
     alerts["split"] = alerts["day"].map(split_of_day).astype(str)
 
-    _write_alerts(db_path, period, alerts, champion, choice, audit)
+    _write_alerts(db_path, period, alerts, champion, choice, audit, run_id)
 
     test_alerts = alerts[alerts["split"] == "test"]
     n_test_laundering = int(period.loc[period["split"] == "test", "label"].sum())
-    labels_val = period.loc[val_mask, "label"].to_numpy(bool)
+    # Calibration quality is measured out of sample: the calibrator was fitted on validation.
+    test_mask = period["split"] == "test"
+    labels_test = period.loc[test_mask, "label"].to_numpy(bool)
+    raw_test = period.loc[test_mask, "raw"].to_numpy()
+    cal_test = period.loc[test_mask, "score"].to_numpy()
     return AlertRun(
+        run_id=run_id,
         model_version=champion.version,
         threshold=choice,
         tradeoff=tradeoff,
-        brier_raw=brier(labels_val, period.loc[val_mask, "raw"].to_numpy()),
-        brier_calibrated=brier(labels_val, period.loc[val_mask, "score"].to_numpy()),
-        reliability_raw=reliability(labels_val, period.loc[val_mask, "raw"].to_numpy()),
-        reliability_calibrated=reliability(labels_val, period.loc[val_mask, "score"].to_numpy()),
+        brier_raw=brier(labels_test, raw_test),
+        brier_calibrated=brier(labels_test, cal_test),
+        reliability_raw=reliability(labels_test, raw_test),
+        reliability_calibrated=reliability(labels_test, cal_test),
         n_alerts=len(alerts),
         alerts_by_split=alerts["split"].value_counts().to_dict(),
         test_precision=float(test_alerts["label"].mean()) if len(test_alerts) else 0.0,
@@ -160,6 +168,7 @@ def _write_alerts(
     champion: Champion,
     choice: ThresholdChoice,
     audit: AuditLog,
+    run_id: str,
 ) -> None:
     by_txn = period.set_index("txn_id")
     top_rows = by_txn.loc[alerts["top_txn_id"]]
@@ -188,6 +197,7 @@ def _write_alerts(
                 event_type="ALERT_CREATED",
                 actor=f"ml:{champion.version}",
                 alert_id=alert_id,
+                run_id=run_id,
                 payload={
                     "account_key": alert.from_key,
                     "alert_date": alert.day.isoformat(),

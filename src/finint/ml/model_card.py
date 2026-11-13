@@ -52,8 +52,8 @@ def render_model_card(
     lines += [
         "",
         "## Calibration and threshold",
-        f"- Isotonic calibration on validation: Brier {run['brier_raw']:.5f} → "
-        f"{run['brier_calibrated']:.5f}.",
+        f"- Isotonic calibration fitted on validation; Brier on test (out of sample) "
+        f"{run['brier_raw']:.5f} → {run['brier_calibrated']:.5f}.",
         f"- Analyst capacity **{choice['capacity_per_day']} alerts/day** → threshold "
         f"{choice['threshold']:.4f} on the calibrated score.",
         f"- Validation at that threshold: precision {_pct(choice['precision'])}, recall "

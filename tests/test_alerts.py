@@ -69,6 +69,8 @@ def test_every_alert_is_audited_and_chain_verifies(run: tuple[Path, Path, Path, 
         alert_ids = {r[0] for r in con.execute("SELECT alert_id FROM alerts").fetchall()}
     assert {e.alert_id for e in events} == alert_ids
     assert all(e.event_type == "ALERT_CREATED" for e in events)
+    assert len({e.run_id for e in events}) == 1
+    assert events[0].run_id is not None
     assert all(
         {"score", "threshold", "model_version", "shap_top5"} <= set(e.payload) for e in events
     )
