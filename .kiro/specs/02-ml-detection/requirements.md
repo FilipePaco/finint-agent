@@ -23,6 +23,7 @@ Train a model that scores transactions for laundering risk, show that graph feat
 
 ### R2.5 Metrics
 - THE SYSTEM SHALL report on the test split: PR-AUC, precision@k at the alert budget, recall@k, and **recall per typology** at the chosen threshold, with laundering transactions absent from the patterns file reported as an `UNLISTED` group. Accuracy and ROC-AUC may appear only as secondary columns.
+- THE SYSTEM SHALL compute primary test metrics **without the simulator's low-activity tail** (days with volume < 1% of the median day; HI-Small Sep 11–18) and report full-test metrics alongside (ADR-02.7).
 - THE SYSTEM SHALL write `reports/ml_report.md` with a comparison table, PR curves and per-typology recall chart.
 
 ### R2.6 Calibration

@@ -49,6 +49,8 @@ def test_train_evaluate_and_save(frame: pd.DataFrame, tmp_path: Path) -> None:
     metrics = evaluate(model, frame)
     assert 0.0 <= metrics["pr_auc"] <= 1.0
     assert set(metrics["budgets"]) == {"0.10%", "0.50%", "1.00%"}
+    assert "full_split" in metrics
+    assert metrics["full_split"]["n"] >= metrics["n"]
     path = save_artifact(model, metrics, tmp_path, "m0-test-20261113")
     for name in ("model.txt", "features.json", "params.json", "metrics.json"):
         assert (path / name).is_file()

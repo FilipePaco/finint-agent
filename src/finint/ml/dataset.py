@@ -17,7 +17,8 @@ SELECT f.txn_id,
        {", ".join(f"f.{c}" for c in CATEGORICAL)},
        t.is_laundering AS label,
        t.typology,
-       CASE WHEN t.ts < $v THEN 'train' WHEN t.ts < $t THEN 'validation' ELSE 'test' END AS split
+       CASE WHEN t.ts < $v THEN 'train' WHEN t.ts < $t THEN 'validation' ELSE 'test' END AS split,
+       coalesce(t.ts >= $tail, false) AS in_tail
 FROM features_txn f
 JOIN transactions t USING (txn_id)
 ORDER BY f.txn_id
@@ -27,7 +28,12 @@ ORDER BY f.txn_id
 def load_frame(db_path: Path, boundaries: SplitBoundaries) -> pd.DataFrame:
     with duckdb.connect(str(db_path), read_only=True) as con:
         frame = con.execute(
-            _SQL, {"v": boundaries.validation_start, "t": boundaries.test_start}
+            _SQL,
+            {
+                "v": boundaries.validation_start,
+                "t": boundaries.test_start,
+                "tail": boundaries.tail_start,
+            },
         ).df()
     for column in NUMERIC:
         frame[column] = frame[column].astype(np.float32)

@@ -109,7 +109,17 @@ def train_lightgbm(
 
 
 def evaluate(model: TrainedModel, frame: pd.DataFrame, split: str = "test") -> dict[str, Any]:
-    part = frame[frame["split"] == split]
+    """Primary metrics on the split without the low-activity tail, plus full-split metrics."""
+    whole = frame[frame["split"] == split]
+    core = whole[~whole["in_tail"]]
+    metrics = _metrics(model, core, split)
+    full = _metrics(model, whole, split)
+    metrics["excludes_tail"] = bool(len(core) < len(whole))
+    metrics["full_split"] = {k: full[k] for k in ("n", "n_positive", "pr_auc", "budgets")}
+    return metrics
+
+
+def _metrics(model: TrainedModel, part: pd.DataFrame, split: str) -> dict[str, Any]:
     labels = part["label"].to_numpy()
     scores = predict(model.booster, part[model.features])
     k = max(1, round(len(part) * TYPOLOGY_BUDGET))

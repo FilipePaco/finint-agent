@@ -48,6 +48,8 @@ Volume sits on the first ten days. The later days are the tails of laundering at
 | validation | 2022-09-06 13:36 | 2022-09-08 16:11 | 1,015,602 | 1,082 | 0.0011 |
 | test | 2022-09-08 16:12 | 2022-09-18 16:18 | 1,015,882 | 1,798 | 0.0018 |
 
+Low-activity tail from **2022-09-11**: days below 1% of the median daily volume. Primary test metrics exclude it (ADR-02.7).
+
 ## Laundering by typology
 
 `UNLISTED` = laundering transactions that the patterns file does not list, so they have no typology. Per-typology recall uses listed transactions; overall recall uses all.
@@ -112,16 +114,16 @@ Rates are derived from the dataset's own cross-currency transfers into USD (the 
 | Sole Proprietorship | 55,369 | 21,122 |
 | Partnership | 55,170 | 22,332 |
 | Individual | 134 | 75 |
-| Country | 2 | 2 |
 | Direct | 2 | 2 |
+| Country | 2 | 2 |
 
 ## Sanctions list provenance
 
 | File | Origin | Retrieved | SHA-256 (prefix) |
 |---|---|---|---|
-| ofac:ADD.CSV | live | 2026-11-13 21:30 UTC | 4b5c7fe2d14b |
-| ofac:ALT.CSV | live | 2026-11-13 21:30 UTC | 8531bcf094f1 |
-| ofac:SDN.CSV | live | 2026-11-13 21:30 UTC | 850ef744932d |
+| ofac:ADD.CSV | live | 2026-11-13 21:40 UTC | 4b5c7fe2d14b |
+| ofac:ALT.CSV | live | 2026-11-13 21:40 UTC | 8531bcf094f1 |
+| ofac:SDN.CSV | live | 2026-11-13 21:40 UTC | 850ef744932d |
 
 ## Injected test cases
 
