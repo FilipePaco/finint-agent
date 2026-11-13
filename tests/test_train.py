@@ -14,9 +14,10 @@ from finint.data.ingest import ingest
 from finint.data.normalize import normalize
 from finint.data.sources import AmlWorldFiles
 from finint.data.split import SplitFractions, split_boundaries
+from finint.ml.artifacts import model_version
 from finint.ml.dataset import load_frame
 from finint.ml.features import CATEGORICAL, FEATURES, build_tabular_features
-from finint.ml.train import evaluate, model_version, save_artifact, train_lightgbm
+from finint.ml.train import evaluate, save_artifact, train_lightgbm
 from synthetic_amlworld import write_dataset
 
 

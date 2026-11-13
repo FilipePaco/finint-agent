@@ -7,11 +7,8 @@ Imbalance is handled with class weights (``scale_pos_weight``), chosen on valida
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,10 +16,8 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from finint.ml.metrics import Array, budget_metrics, pr_auc, recall_by_group, top_k_mask
-
-BUDGETS = (0.001, 0.005, 0.01)
-TYPOLOGY_BUDGET = 0.005
+from finint.ml.evaluation import evaluate_scores
+from finint.ml.metrics import Array, pr_auc
 
 BASE_PARAMS: dict[str, Any] = {
     "objective": "binary",
@@ -51,21 +46,6 @@ class TrainedModel:
     params: dict[str, Any]
     validation_pr_auc: float
     candidates: dict[str, float]
-
-
-def git_sha() -> str:
-    git = shutil.which("git")
-    if git is None:
-        return "nogit"
-    result = subprocess.run(  # noqa: S603 - fixed arguments, resolved git binary
-        [git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=False
-    )
-    return result.stdout.strip() or "nogit"
-
-
-def model_version(name: str, when: datetime | None = None) -> str:
-    stamp = (when or datetime.now(UTC)).strftime("%Y%m%d")
-    return f"{name}-{git_sha()}-{stamp}"
 
 
 def train_lightgbm(
@@ -110,32 +90,16 @@ def train_lightgbm(
 
 def evaluate(model: TrainedModel, frame: pd.DataFrame, split: str = "test") -> dict[str, Any]:
     """Primary metrics on the split without the low-activity tail, plus full-split metrics."""
-    whole = frame[frame["split"] == split]
-    core = whole[~whole["in_tail"]]
-    metrics = _metrics(model, core, split)
-    full = _metrics(model, whole, split)
-    metrics["excludes_tail"] = bool(len(core) < len(whole))
-    metrics["full_split"] = {k: full[k] for k in ("n", "n_positive", "pr_auc", "budgets")}
-    return metrics
-
-
-def _metrics(model: TrainedModel, part: pd.DataFrame, split: str) -> dict[str, Any]:
-    labels = part["label"].to_numpy()
-    scores = predict(model.booster, part[model.features])
-    k = max(1, round(len(part) * TYPOLOGY_BUDGET))
-    flagged = top_k_mask(scores, k)
-    return {
-        "split": split,
-        "n": len(part),
-        "n_positive": int(labels.sum()),
-        "pr_auc": pr_auc(labels, scores),
-        "budgets": budget_metrics(labels, scores, BUDGETS),
-        "typology_recall_at": f"{TYPOLOGY_BUDGET:.2%}",
-        "typology_recall": {
-            g: {"n_positive": n, "recall": r}
-            for g, (n, r) in recall_by_group(labels, flagged, part["typology"].tolist()).items()
-        },
-    }
+    part = frame[frame["split"] == split]
+    scored = pd.DataFrame(
+        {
+            "score": predict(model.booster, part[model.features]),
+            "label": part["label"].to_numpy(),
+            "in_tail": part["in_tail"].to_numpy(),
+            "typology": part["typology"].tolist(),
+        }
+    )
+    return evaluate_scores(scored, split)
 
 
 def save_artifact(

@@ -49,3 +49,17 @@ def test_budget_metrics_rounds_k_from_fraction() -> None:
     out = budget_metrics(LABELS, SCORES, [0.1, 0.3])
     assert out["10.00%"] == {"k": 1, "precision": 1.0, "recall": pytest.approx(1 / 3)}
     assert out["30.00%"]["k"] == 3
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_pr_auc_matches_sklearn_including_ties(seed: int) -> None:
+    from sklearn.metrics import average_precision_score
+
+    rng = np.random.default_rng(seed)
+    labels = rng.random(2000) < 0.05
+    scores = np.round(rng.random(2000) + labels * 0.3, 2)  # rounding creates ties
+    assert pr_auc(labels, scores) == pytest.approx(average_precision_score(labels, scores))
+
+
+def test_pr_auc_without_positives_is_zero() -> None:
+    assert pr_auc(np.zeros(5, dtype=bool), np.arange(5.0)) == 0.0
