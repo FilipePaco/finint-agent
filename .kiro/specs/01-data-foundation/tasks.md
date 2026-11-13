@@ -7,8 +7,8 @@
 - [x] 1.3 Patterns parser + linker → `attempts`, `transactions.attempt_id/typology`; unmatched lines go to the data-quality report · _R1.1_
 - [x] 1.4 FX table + `amount_usd`, `cross_currency`, `cross_bank`, `ts_shifted` · _R1.2_
 - [x] 1.5 Synthetic identities (seeded Faker) · _R1.3_
-- [ ] 1.6 OFAC SDN loader with snapshot fallback + `data_sources` provenance · _R1.4_
-- [ ] 1.7 `sanctions_cases.yaml` (≥ 20 cases incl. ≥ 5 decoys) + injector · _R1.5_
+- [x] 1.6 OFAC SDN loader with snapshot fallback + `data_sources` provenance · _R1.4_
+- [x] 1.7 `sanctions_cases.yaml` (≥ 20 cases incl. ≥ 5 decoys) + injector · _R1.5_
 - [ ] 1.8 Synthetic `reference` memos + `prompt_injections.yaml` + adverse-media fixtures · _R1.6_
 - [ ] 1.9 `data_classification.yaml` · _R1.7_
 - [ ] 1.10 `reports/data_quality.md` generator
