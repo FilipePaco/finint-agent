@@ -12,7 +12,13 @@ from finint.config import Settings, load_yaml
 from finint.data.download import https_open
 from finint.data.identities import build_entities
 from finint.data.ingest import IngestReport, ingest
-from finint.data.inject import inject_sanctions, load_sanctions_cases
+from finint.data.inject import (
+    inject_media,
+    inject_sanctions,
+    load_media_cases,
+    load_sanctions_cases,
+)
+from finint.data.memos import add_memos, inject_prompts, load_injection_cases
 from finint.data.normalize import NormalizeReport, normalize
 from finint.data.sanctions import SanctionsReport, fetch_sdn, load_sdn
 from finint.data.sources import AmlWorldFiles
@@ -26,6 +32,9 @@ class BuildReport(BaseModel):
     split: SplitBoundaries
     sanctions: SanctionsReport
     injected_sanctions: dict[str, str]
+    n_memos: int
+    injected_media: dict[str, str]
+    injected_prompts: dict[str, int]
 
 
 def _offline_opener(url: str) -> BinaryIO:
@@ -76,6 +85,24 @@ def build(
     cases = load_sanctions_cases(settings.injections_dir / "sanctions_cases.yaml")
     injected = inject_sanctions(db, cases, split, settings.seed)
 
+    log("memos: synthetic payment references")
+    n_memos = add_memos(db, load_yaml("memos", settings.config_dir)["templates"])
+
+    log("inject: adverse-media test entities and prompt-injection memos")
+    media = inject_media(
+        db,
+        load_media_cases(settings.injections_dir / "media_cases.yaml"),
+        split,
+        settings.seed,
+        exclude=set(injected.values()),
+    )
+    prompts = inject_prompts(
+        db,
+        load_injection_cases(settings.injections_dir / "prompt_injections.yaml"),
+        split,
+        settings.seed,
+    )
+
     return BuildReport(
         ingest=ingested,
         normalize=normalized,
@@ -83,4 +110,7 @@ def build(
         split=split,
         sanctions=sanctions,
         injected_sanctions=injected,
+        n_memos=n_memos,
+        injected_media=media,
+        injected_prompts=prompts,
     )
