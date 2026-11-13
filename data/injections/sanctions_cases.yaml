@@ -1,0 +1,266 @@
+# Injected sanctions screening cases (task 1.7 · R1.5).
+#
+# Each case renames one synthetic entity so its name is a near-match to a real entry of the
+# public OFAC SDN list. Purpose: test the deterministic screener (spec 03, R3.4) on the
+# variants that make name screening hard. The injected accounts and their transactions
+# stay synthetic; no real person is connected to any transaction in this repository.
+#
+# expected:
+#   TRUE_MATCH  - same person/company as the SDN entry (name variant + consistent DOB/country)
+#   FALSE_MATCH - decoy: similar or identical name, but a different person (DOB/country differ)
+# role:
+#   subject      - attached to an entity that sends laundering transactions in the test split
+#   counterparty - attached to a non-laundering counterparty of such an entity
+# variant: transliteration | missing_middle_name | swapped_order | diacritics_spacing | alias
+#          | legal_form | exact_name_decoy | similar_name_decoy
+
+cases:
+  # --- transliteration -------------------------------------------------------------------
+  - id: SAN-01
+    sdn_ent_num: 30879            # MOKHBER, Mohammad (DOB 01 Sep 1955, Iran)
+    variant: transliteration
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Mohammed Mokhber
+    dob: 1955-09-01
+    country: Iran
+    country_iso2: IR
+  - id: SAN-02
+    sdn_ent_num: 35790            # KOVALCHUK, Tatyana Aleksandrovna (DOB 08 Feb 1968, Russia)
+    variant: transliteration
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Tatiana Alexandrovna Kovalchuk
+    dob: 1968-02-08
+    country: Russia
+    country_iso2: RU
+  - id: SAN-03
+    sdn_ent_num: 22259            # MAKHLUF, Iyad (DOB 21 Jan 1973, Syria)
+    variant: transliteration
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Iyad Makhlouf
+    dob: 1973-01-21
+    country: Syria
+    country_iso2: SY
+  - id: SAN-04
+    sdn_ent_num: 47819            # STRUKOV, Konstantin Ivanovich (DOB 10 Sep 1958, Russia)
+    variant: transliteration
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Konstantin Ivanovitch Stroukov
+    dob: 1958-09-10
+    country: Russia
+    country_iso2: RU
+
+  # --- missing middle name / patronymic --------------------------------------------------
+  - id: SAN-05
+    sdn_ent_num: 45864            # ZENKIN, Denis Vladimirovich (DOB 02 Sep 1974, Russia)
+    variant: missing_middle_name
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Denis Zenkin
+    dob: 1974-09-02
+    country: Russia
+    country_iso2: RU
+  - id: SAN-06
+    sdn_ent_num: 50856            # MAGHFOORI, Mohammad Mahdi (DOB 20 Dec 1969, Iran)
+    variant: missing_middle_name
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Mohammad Maghfoori
+    dob: 1969-12-20
+    country: Iran
+    country_iso2: IR
+  - id: SAN-07
+    sdn_ent_num: 12178            # GONZALEZ MEDINA, Jaime Andres (DOB 27 Apr 1975, Colombia)
+    variant: missing_middle_name
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Jaime Gonzalez Medina
+    dob: 1975-04-27
+    country: Colombia
+    country_iso2: CO
+
+  # --- swapped word order ----------------------------------------------------------------
+  - id: SAN-08
+    sdn_ent_num: 55405            # HOU, Xueyuan (DOB 07 Nov 1986, China)
+    variant: swapped_order
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Xueyuan Hou
+    dob: 1986-11-07
+    country: China
+    country_iso2: CN
+  - id: SAN-09
+    sdn_ent_num: 39496            # JON, Il Ho (DOB 20 Feb 1956, North Korea)
+    variant: swapped_order
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Il-Ho Jon
+    dob: 1956-02-20
+    country: Korea, North
+    country_iso2: KP
+
+  # --- diacritics and spacing ------------------------------------------------------------
+  - id: SAN-10
+    sdn_ent_num: 25149            # SANDOVAL CASTANEDA, Roberto (DOB 15 Nov 1969, Mexico)
+    variant: diacritics_spacing
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Roberto Sandoval Castañeda
+    dob: 1969-11-15
+    country: Mexico
+    country_iso2: MX
+  - id: SAN-11
+    sdn_ent_num: 19932            # MUNOZ MEJIA, Jhonny German (DOB 17 Dec 1986, Colombia)
+    variant: diacritics_spacing
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Jhonny Germán Muñoz Mejía
+    dob: 1986-12-17
+    country: Colombia
+    country_iso2: CO
+  - id: SAN-12
+    sdn_ent_num: 6717             # HENAO MONTOYA, Arcangel de Jesus (DOB 07 Oct 1954, Colombia)
+    variant: diacritics_spacing
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Arcángel de Jesús Henao-Montoya
+    dob: 1954-10-07
+    country: Colombia
+    country_iso2: CO
+
+  # --- alias (matches an ALT.CSV name, not the primary name) -----------------------------
+  - id: SAN-13
+    sdn_ent_num: 12845            # HAMSHO, Muhammad; aka HAMCHO, Mohamed (DOB 20 May 1966, Syria)
+    variant: alias
+    expected: TRUE_MATCH
+    kind: person
+    role: subject
+    name: Mohamed Hamcho
+    dob: 1966-05-20
+    country: Syria
+    country_iso2: SY
+  - id: SAN-14
+    sdn_ent_num: 57394            # ATAEI AGHDAM, Gholam Abbas; aka AQDAM, Gholamabbas Atai
+    variant: alias
+    expected: TRUE_MATCH
+    kind: person
+    role: counterparty
+    name: Gholamabbas Atai Aqdam
+    dob: 1954-06-08
+    country: Iran
+    country_iso2: IR
+
+  # --- companies (legal form variations) -------------------------------------------------
+  - id: SAN-15
+    sdn_ent_num: 41896            # SUMILAB, S.A. DE C.V. (Mexico)
+    variant: legal_form
+    expected: TRUE_MATCH
+    kind: company
+    role: subject
+    name: Sumilab SA de CV
+    country: Mexico
+    country_iso2: MX
+  - id: SAN-16
+    sdn_ent_num: 45784            # JACBAC TECHNOLOGY DIS TICARET LIMITED SIRKETI (Turkey)
+    variant: legal_form
+    expected: TRUE_MATCH
+    kind: company
+    role: counterparty
+    name: Jacbac Technology Dis Ticaret Ltd. Sti.
+    country: Turkey
+    country_iso2: TR
+  - id: SAN-17
+    sdn_ent_num: 49393            # LIMITED LIABILITY COMPANY PRAVOURMISKOE (Russia)
+    variant: legal_form
+    expected: TRUE_MATCH
+    kind: company
+    role: subject
+    name: Pravourmiskoe LLC
+    country: Russia
+    country_iso2: RU
+
+  # --- decoys: similar or identical names, different people ------------------------------
+  - id: SAN-18
+    sdn_ent_num: 30879            # MOKHBER, Mohammad: DOB 1955, Iran
+    variant: exact_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Mohammad Mokhber
+    dob: 1991-03-14
+    country: UK
+    country_iso2: GB
+  - id: SAN-19
+    sdn_ent_num: 21042            # ZHANG, Jian: DOB 22 Nov 1978, China (very common name)
+    variant: exact_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Jian Zhang
+    dob: 1993-07-02
+    country: Canada
+    country_iso2: CA
+  - id: SAN-20
+    sdn_ent_num: 34104            # KARAMI, Hassan: DOB 1960, Iran
+    variant: exact_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Hassan Karami
+    dob: 1987-10-30
+    country: Germany
+    country_iso2: DE
+  - id: SAN-21
+    sdn_ent_num: 29072            # AL-ASSAD, Bushra: DOB 24 Oct 1960, Syria
+    variant: similar_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Bushra Asad
+    dob: 1995-01-19
+    country: Australia
+    country_iso2: AU
+  - id: SAN-22
+    sdn_ent_num: 58704            # TORRES TORRES, Carlos Alberto: DOB 18 Nov 1975, Mexico
+    variant: similar_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Carlos Alberto Torres Ruiz
+    dob: 1982-05-11
+    country: Spain
+    country_iso2: ES
+  - id: SAN-23
+    sdn_ent_num: 44788            # FAN, Yang: DOB 23 Oct 1985, China
+    variant: exact_name_decoy
+    expected: FALSE_MATCH
+    kind: person
+    role: counterparty
+    name: Yang Fan
+    dob: 1999-04-08
+    country: Australia
+    country_iso2: AU
+  - id: SAN-24
+    sdn_ent_num: 41896            # SUMILAB, S.A. DE C.V. (Mexico)
+    variant: similar_name_decoy
+    expected: FALSE_MATCH
+    kind: company
+    role: counterparty
+    name: Sumilabs Diagnostics GmbH
+    country: Germany
+    country_iso2: DE

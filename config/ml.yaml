@@ -1,0 +1,7 @@
+# ML configuration (spec 02). The split is shared with spec 01: injected test cases are
+# attached to entities active in the test window.
+split:
+  # Chronological, by cumulative transaction count (ADR-02.6).
+  train: 0.6
+  validation: 0.2
+  test: 0.2

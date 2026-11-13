@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import shutil
+import ssl
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO
+
+import truststore
 
 from finint.data.sources import KAGGLE_DATASET, AmlWorldFiles
 
@@ -19,16 +22,22 @@ def file_url(name: str) -> str:
     return f"{KAGGLE_DOWNLOAD_URL}/{name}"
 
 
-def _https_open(url: str) -> BinaryIO:
+def https_open(url: str) -> BinaryIO:
+    """Open an HTTPS URL verifying certificates against the OS trust store (``truststore``).
+
+    Python builds that ship without system CA certificates, and networks with TLS
+    inspection, otherwise fail verification even though the system trusts the chain.
+    """
     if not url.startswith("https://"):
         raise ValueError(f"Refusing non-HTTPS download: {url}")
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     request = urllib.request.Request(url, headers={"User-Agent": "finint-agent"})  # noqa: S310
-    response: BinaryIO = urllib.request.urlopen(request, timeout=60)  # noqa: S310
+    response: BinaryIO = urllib.request.urlopen(request, timeout=60, context=context)  # noqa: S310
     return response
 
 
 def download(
-    files: AmlWorldFiles, *, force: bool = False, opener: Opener = _https_open
+    files: AmlWorldFiles, *, force: bool = False, opener: Opener = https_open
 ) -> list[Path]:
     """Fetch missing files (or all with ``force``). Writes to ``*.part`` then renames atomically."""
     targets = [files.transactions, files.accounts, files.patterns]
