@@ -11,10 +11,13 @@ import typer
 
 from finint import __version__
 from finint.config import get_settings
+from finint.data.split import SplitBoundaries
 
 app = typer.Typer(no_args_is_help=True, help="finint-agent: AML alert detection and investigation.")
 data_app = typer.Typer(no_args_is_help=True, help="Build the data foundation (spec 01).")
 app.add_typer(data_app, name="data")
+ml_app = typer.Typer(no_args_is_help=True, help="Train and evaluate detection models (spec 02).")
+app.add_typer(ml_app, name="ml")
 
 
 @app.callback()
@@ -77,3 +80,45 @@ def data_build(
         typer.echo(str(error), err=True)
         raise typer.Exit(code=2) from error
     typer.echo(report.model_dump_json(indent=2))
+
+
+def _split_boundaries() -> SplitBoundaries:
+    import duckdb
+
+    from finint.config import load_yaml
+    from finint.data.split import SplitFractions, split_boundaries
+
+    settings = get_settings()
+    fractions = SplitFractions.model_validate(load_yaml("ml", settings.config_dir)["split"])
+    with duckdb.connect(str(settings.duckdb_path), read_only=True) as con:
+        return split_boundaries(con, fractions)
+
+
+@ml_app.command("features")
+def ml_features() -> None:
+    """Build per-transaction tabular features (features_txn)."""
+    from finint.ml.features import build_tabular_features
+
+    typer.echo(f"features_txn rows: {build_tabular_features(get_settings().duckdb_path):,}")
+
+
+@ml_app.command("train")
+def ml_train(
+    model: Annotated[str, typer.Option(help="m0 = tabular baseline.")] = "m0",
+) -> None:
+    """Train a model, pick class weight on validation, evaluate on test, save the artifact."""
+    import json
+
+    from finint.ml.dataset import load_frame
+    from finint.ml.features import FEATURES
+    from finint.ml.train import evaluate, model_version, save_artifact, train_lightgbm
+
+    feature_sets = {"m0": list(FEATURES)}
+    if model not in feature_sets:
+        raise typer.BadParameter(f"unknown model {model!r}; choose from {sorted(feature_sets)}")
+    settings = get_settings()
+    frame = load_frame(settings.duckdb_path, _split_boundaries())
+    trained = train_lightgbm(frame, feature_sets[model], model, settings.seed, log=typer.echo)
+    metrics = evaluate(trained, frame)
+    path = save_artifact(trained, metrics, settings.artifacts_dir, model_version(model))
+    typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))
