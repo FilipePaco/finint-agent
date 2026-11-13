@@ -151,10 +151,11 @@ def ml_train(
     if model not in feature_sets:
         raise typer.BadParameter(f"unknown model {model!r}; choose from {sorted(feature_sets)}")
     settings = get_settings()
+    version = model_version(model)  # at start: the code that trains, not the code at save time
     frame = load_frame(settings.duckdb_path, _split_boundaries(), graph=model == "m1")
     trained = train_lightgbm(frame, feature_sets[model], model, settings.seed, log=typer.echo)
     metrics = evaluate(trained, frame)
-    path = save_artifact(trained, metrics, settings.artifacts_dir, model_version(model))
+    path = save_artifact(trained, metrics, settings.artifacts_dir, version)
     typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))
 
 
@@ -167,10 +168,11 @@ def _train_gnn() -> None:
     from finint.ml.gnn import collect_scores, load_day_batches, save_gnn_artifact, train_gnn
 
     settings = get_settings()
+    version = model_version("m2")  # at start: the code that trains, not the code at save time
     batches = load_day_batches(settings.duckdb_path, _split_boundaries(), log=typer.echo)
     result = train_gnn(batches, settings.seed, log=typer.echo)
     metrics = evaluate_scores(collect_scores(result.model, batches, "test"))
-    path = save_gnn_artifact(result, metrics, settings.artifacts_dir, model_version("m2"))
+    path = save_gnn_artifact(result, metrics, settings.artifacts_dir, version)
     typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))
 
 
@@ -211,3 +213,41 @@ def ml_alerts() -> None:
         f"for {choice.capacity_per_day}/day | val precision {choice.precision:.1%} | "
         f"test precision {run.test_precision:.1%}, recall {run.test_recall_transactions:.1%}"
     )
+
+
+@ml_app.command("report")
+def ml_report() -> None:
+    """Write reports/ml_report.md and figures from the saved artifacts."""
+    import json
+
+    import lightgbm as lgb
+
+    from finint.ml.dataset import load_frame
+    from finint.ml.evaluation import evaluate_scores
+    from finint.ml.registry import choose_champion, latest_artifacts
+    from finint.ml.report import build_ml_report
+
+    settings = get_settings()
+    models = latest_artifacts(settings.artifacts_dir)
+    stale = [
+        a for a in models.values() if a.kind == "lightgbm" and "pr_curve" not in a.metrics["test"]
+    ]
+    if stale:  # artifacts trained before curves were stored: re-score test once
+        frame = load_frame(settings.duckdb_path, _split_boundaries(), graph=True)
+        test = frame[frame["split"] == "test"]
+        for info in stale:
+            booster = lgb.Booster(model_file=str(info.path / "model.txt"))
+            scored = test[["label", "in_tail", "typology"]].copy()
+            scored["score"] = booster.predict(
+                test[json.loads((info.path / "features.json").read_text())]
+            )
+            info.metrics["test"] = evaluate_scores(scored)
+            (info.path / "metrics.json").write_text(json.dumps(info.metrics, indent=2), "utf-8")
+            typer.echo(f"re-scored {info.version} to store its PR curve")
+        models = latest_artifacts(settings.artifacts_dir)
+    champion, why = choose_champion(models)
+    run = json.loads((champion.path / "alert_run.json").read_text("utf-8"))
+    text = build_ml_report(models, champion, why, run, settings.reports_dir / "figures")
+    out = settings.reports_dir / "ml_report.md"
+    out.write_text(text, encoding="utf-8")
+    typer.echo(f"wrote {out}")
