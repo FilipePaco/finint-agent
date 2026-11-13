@@ -65,13 +65,14 @@ def data_download(
 @data_app.command("build")
 def data_build(
     variant: Annotated[str, typer.Option(help="AMLworld variant prefix.")] = "HI-Small",
+    offline: Annotated[bool, typer.Option(help="Use the pinned OFAC snapshot.")] = False,
 ) -> None:
     """Rebuild data/finint.duckdb from the raw files (all spec-01 steps, in order)."""
     from finint.data.build import build
     from finint.data.sources import MissingRawDataError
 
     try:
-        report = build(get_settings(), variant, log=typer.echo)
+        report = build(get_settings(), variant, offline=offline, log=typer.echo)
     except MissingRawDataError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=2) from error

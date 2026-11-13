@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     config_dir: Path = PROJECT_ROOT / "config"
     reports_dir: Path = PROJECT_ROOT / "reports"
     artifacts_dir: Path = PROJECT_ROOT / "artifacts"
+    # Versioned inputs that live in the repo (not regenerated data)
+    fixtures_dir: Path = PROJECT_ROOT / "data" / "fixtures"
+    injections_dir: Path = PROJECT_ROOT / "data" / "injections"
 
     # Reproducibility and time
     seed: int = 42
