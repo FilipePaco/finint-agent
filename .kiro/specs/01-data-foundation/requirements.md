@@ -41,7 +41,8 @@ Load IBM AMLworld **HI-Small** into DuckDB, normalize it, attach synthetic ident
 - THE SYSTEM SHALL create adverse-media fixture documents for injected entities: relevant hits, irrelevant same-name hits, and ≥ 3 documents carrying injection payloads.
 
 ### R1.7 Data minimization map
-- THE SYSTEM SHALL keep a field classification (`config/data_classification.yaml`): each column marked `llm_allowed`, `llm_masked` or `llm_forbidden`. Spec 03 enforces it.
+- THE SYSTEM SHALL keep a field classification (`config/data_classification.yaml`): each column marked `allowed`, `untrusted` (sent only inside a delimited untrusted-data block), `masked` or `forbidden`. Spec 03 enforces it.
+- WHEN `finint data build` runs THE SYSTEM SHALL fail if any column of any table is unclassified.
 
 ## Open questions [NEEDS CLARIFICATION]
 - Q1 (resolved: simulated history, labeled): HI-Small covers Sep 1–18, 2022, with volume only on Sep 1–10. For the 12-month monthly chart we either (a) replay/bootstrap daily alert volumes into a synthetic 12-month history, clearly labeled as simulated, or (b) also load LI-Small/HI-Medium for more days. **Proposal: (a)**. It is cheap and transparent.

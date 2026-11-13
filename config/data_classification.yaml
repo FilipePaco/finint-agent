@@ -1,0 +1,76 @@
+# Data classification for LLM context (task 1.7 of spec 01 · R1.7, enforced by R3.9).
+#
+#   allowed    - may be sent to an LLM when the investigation step needs it
+#   untrusted  - may be sent, but only inside a delimited untrusted-data block (R3.10)
+#   masked     - only a reduced form may be sent (e.g. year of birth, not the full date)
+#   forbidden  - never sent to an LLM (labels, ground truth, internal ids, provenance)
+#
+# `finint data build` fails if any column of any table is missing here, so new data cannot
+# silently reach a prompt. Tables marked `_all: forbidden` are whole-table forbidden.
+tables:
+  transactions:
+    txn_id: allowed
+    ts: allowed                  # investigation dates are the real dataset dates
+    ts_shifted: forbidden        # reporting only; two calendars would confuse grounding
+    from_bank: forbidden         # use from_key
+    from_account: forbidden
+    to_bank: forbidden
+    to_account: forbidden
+    from_key: allowed            # pseudonymous bank:account key
+    to_key: allowed
+    amount_received: allowed
+    currency_received: allowed
+    amount_paid: allowed
+    currency_paid: allowed
+    amount_usd: allowed
+    payment_format: allowed
+    cross_currency: allowed
+    cross_bank: allowed
+    self_transfer: allowed
+    reference: untrusted         # payment memo: attacker-controlled
+    is_laundering: forbidden     # label
+    attempt_id: forbidden        # label
+    typology: forbidden          # label
+  accounts:
+    account_key: allowed
+    entity_id: allowed
+    bank_name: allowed           # carries the bank country, relevant for cross-border flows
+    bank_id: forbidden
+    account_number: forbidden
+    entity_label: forbidden      # dataset artefact, not a name
+  entities:
+    entity_id: allowed
+    entity_type: allowed
+    country: allowed
+    country_iso2: allowed
+    synthetic_name: untrusted    # names come from outside the bank in real life
+    date_of_birth: masked        # year only; screening compares full DOB in code
+    n_accounts: allowed
+    is_injected: forbidden       # evaluation ground truth
+    injection_case_id: forbidden
+  sdn_entries:
+    ent_num: allowed
+    name: allowed
+    sdn_type: allowed
+    programs: allowed
+    dob_text: allowed
+    nationality: allowed
+    remarks: forbidden           # long free text; screening exposes the parsed fields
+  sdn_aliases:
+    ent_num: allowed
+    alt_num: forbidden
+    alt_type: allowed
+    alt_name: allowed
+  sdn_addresses:
+    ent_num: allowed
+    country: allowed
+    add_num: forbidden
+    address: forbidden
+    city: forbidden
+  attempts: {_all: forbidden}           # labels
+  pattern_unmatched: {_all: forbidden}  # labels
+  fx_rates: {_all: forbidden}           # not needed by the agent; amount_usd is precomputed
+  data_sources: {_all: forbidden}       # provenance
+  injected_sanctions: {_all: forbidden} # ground truth
+  injected_media: {_all: forbidden}     # ground truth
+  injected_prompts: {_all: forbidden}   # ground truth

@@ -10,6 +10,6 @@
 - [x] 1.6 OFAC SDN loader with snapshot fallback + `data_sources` provenance · _R1.4_
 - [x] 1.7 `sanctions_cases.yaml` (≥ 20 cases incl. ≥ 5 decoys) + injector · _R1.5_
 - [x] 1.8 Synthetic `reference` memos + `prompt_injections.yaml` + adverse-media fixtures · _R1.6_
-- [ ] 1.9 `data_classification.yaml` · _R1.7_
-- [ ] 1.10 `reports/data_quality.md` generator
-- [ ] 1.11 Tests: ingestion row counts on a tiny fixture CSV, linker matching, deterministic identities, injection idempotency
+- [x] 1.9 `data_classification.yaml` · _R1.7_
+- [x] 1.10 `reports/data_quality.md` generator
+- [x] 1.11 Tests: ingestion row counts on a tiny fixture CSV, linker matching, deterministic identities, injection idempotency

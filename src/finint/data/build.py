@@ -9,6 +9,7 @@ import duckdb
 from pydantic import BaseModel
 
 from finint.config import Settings, load_yaml
+from finint.data.classification import DataClassification
 from finint.data.download import https_open
 from finint.data.identities import build_entities
 from finint.data.ingest import IngestReport, ingest
@@ -20,6 +21,7 @@ from finint.data.inject import (
 )
 from finint.data.memos import add_memos, inject_prompts, load_injection_cases
 from finint.data.normalize import NormalizeReport, normalize
+from finint.data.quality import write_quality_report
 from finint.data.sanctions import SanctionsReport, fetch_sdn, load_sdn
 from finint.data.sources import AmlWorldFiles
 from finint.data.split import SplitBoundaries, SplitFractions, split_boundaries
@@ -102,6 +104,12 @@ def build(
         split,
         settings.seed,
     )
+
+    log("classify: every column must be in config/data_classification.yaml")
+    DataClassification(load_yaml("data_classification", settings.config_dir)).enforce(db)
+
+    report_path = write_quality_report(db, split, variant, settings.reports_dir / "data_quality.md")
+    log(f"report: {report_path}")
 
     return BuildReport(
         ingest=ingested,
