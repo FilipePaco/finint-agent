@@ -77,3 +77,19 @@ tables:
   features_txn: {_all: allowed}         # model features; explain_alert exposes top contributors
   graph_nodes: {_all: allowed}          # per account-day graph statistics
   features_graph: {_all: allowed}       # graph features per transaction
+  alerts:
+    alert_id: allowed
+    account_key: allowed
+    alert_date: allowed
+    split: forbidden             # evaluation bookkeeping
+    score: allowed
+    score_raw: forbidden         # uncalibrated; the calibrated score is the one explained
+    threshold: allowed
+    model_version: allowed
+    priority_rank: allowed
+    top_txn_id: allowed
+    contributing_txn_ids: allowed
+    n_txn: allowed
+    features_json: allowed
+    shap_top5_json: allowed
+  alert_labels: {_all: forbidden}       # ground truth

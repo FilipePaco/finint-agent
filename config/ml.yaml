@@ -5,3 +5,7 @@ split:
   train: 0.6
   validation: 0.2
   test: 0.2
+
+alerts:
+  # Analyst capacity: how many account-day alerts the team can review per day (ADR-02.3).
+  capacity_per_day: 200

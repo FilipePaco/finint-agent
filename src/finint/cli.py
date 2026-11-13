@@ -18,6 +18,21 @@ data_app = typer.Typer(no_args_is_help=True, help="Build the data foundation (sp
 app.add_typer(data_app, name="data")
 ml_app = typer.Typer(no_args_is_help=True, help="Train and evaluate detection models (spec 02).")
 app.add_typer(ml_app, name="ml")
+audit_app = typer.Typer(no_args_is_help=True, help="Inspect the audit trail.")
+app.add_typer(audit_app, name="audit")
+
+
+@audit_app.command("verify")
+def audit_verify() -> None:
+    """Recompute the hash chain; exit 1 if any event was altered."""
+    from finint.core.audit import AuditIntegrityError, AuditLog
+
+    try:
+        count = AuditLog(get_settings().audit_db_path).verify()
+    except AuditIntegrityError as error:
+        typer.echo(f"AUDIT CHAIN BROKEN: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(f"audit chain intact: {count:,} events")
 
 
 @app.callback()
@@ -157,3 +172,42 @@ def _train_gnn() -> None:
     metrics = evaluate_scores(collect_scores(result.model, batches, "test"))
     path = save_gnn_artifact(result, metrics, settings.artifacts_dir, model_version("m2"))
     typer.echo(json.dumps({"artifact": str(path), **metrics}, indent=2, default=str))
+
+
+@ml_app.command("alerts")
+def ml_alerts() -> None:
+    """Pick the champion, calibrate, set the capacity threshold, write alerts + audit events."""
+    import json
+    from dataclasses import asdict
+
+    from finint.config import load_yaml
+    from finint.core.audit import AuditLog
+    from finint.ml.alerts import generate_alerts, load_champion
+    from finint.ml.dataset import load_frame
+    from finint.ml.model_card import render_model_card, write_model_card
+    from finint.ml.registry import choose_champion, latest_artifacts
+
+    settings = get_settings()
+    info, why = choose_champion(latest_artifacts(settings.artifacts_dir))
+    typer.echo(f"champion: {info.version} ({why})")
+    bounds = _split_boundaries()
+    frame = load_frame(settings.duckdb_path, bounds, graph=info.name != "m0")
+    capacity = int(load_yaml("ml", settings.config_dir)["alerts"]["capacity_per_day"])
+    run = generate_alerts(
+        settings.duckdb_path,
+        frame,
+        bounds,
+        load_champion(info.path),
+        capacity,
+        AuditLog(settings.audit_db_path),
+    )
+    payload = asdict(run)
+    (info.path / "alert_run.json").write_text(json.dumps(payload, indent=2, default=str), "utf-8")
+    card = render_model_card(info, why, payload, bounds.model_dump(mode="json"))
+    write_model_card(info.path / "model_card.md", card)
+    choice = run.threshold
+    typer.echo(
+        f"alerts: {run.n_alerts:,} {run.alerts_by_split} | threshold {choice.threshold:.4f} "
+        f"for {choice.capacity_per_day}/day | val precision {choice.precision:.1%} | "
+        f"test precision {run.test_precision:.1%}, recall {run.test_recall_transactions:.1%}"
+    )

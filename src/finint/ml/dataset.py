@@ -19,6 +19,8 @@ SELECT f.txn_id,
        {", ".join(f"f.{c}" for c in CATEGORICAL)},
        t.is_laundering AS label,
        t.typology,
+       t.from_key,
+       t.ts,
        CASE WHEN t.ts < $v THEN 'train' WHEN t.ts < $t THEN 'validation' ELSE 'test' END AS split,
        coalesce(t.ts >= $tail, false) AS in_tail
 FROM features_txn f
