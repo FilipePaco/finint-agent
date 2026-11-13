@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test test-gnn check data features train alerts audit-verify
+.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -46,3 +46,6 @@ alerts: ## Champion, calibration, capacity threshold, alerts + audit events (spe
 
 audit-verify: ## Recompute the audit hash chain
 	$(UV) run finint audit verify
+
+report-ml: ## ML report and figures from saved artifacts (spec 02)
+	$(UV) run finint ml report
