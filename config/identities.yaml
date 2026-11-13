@@ -1,0 +1,37 @@
+# Synthetic identity generation (task 1.5 · R1.3). Names are fictional, generated with
+# Faker and seeded by entity_id, and are never linked to real persons.
+
+# Locales whose Faker output is not Latin script, and how to get a Latin name.
+romanize:
+  faker_romanized: [ja_JP, zh_CN]        # Faker's own romanized_name providers
+  transliterate: [ru_RU, el_GR, el_CY]   # unidecode reads well for these scripts
+  curated: [ar_SA, he_IL]                # unidecode is unreadable -> lists below
+
+curated_names:
+  ar_SA:
+    first: [Mohammed, Abdullah, Fahad, Khalid, Sultan, Faisal, Omar, Yousef, Nasser, Saad,
+            Turki, Majed, Rayan, Hamad, Bandar, Noura, Sara, Reem, Lama, Haifa, Maha, Dana,
+            Hessa, Amal, Asma]
+    last: [Al-Qahtani, Al-Otaibi, Al-Ghamdi, Al-Zahrani, Al-Harbi, Al-Shehri, Al-Dosari,
+           Al-Mutairi, Al-Shammari, Al-Subaie, Al-Anazi, Al-Juhani, Al-Malki, Al-Rashidi,
+           Al-Omari, Al-Saud, Bakr, Hijazi, Kamal, Nassar]
+  he_IL:
+    first: [Yosef, David, Moshe, Avraham, Daniel, Itai, Noam, Ariel, Eitan, Yonatan, Noa,
+            Tamar, Maya, Shira, Yael, Michal, Avigail, Hila, Rivka, Leah]
+    last: [Cohen, Levi, Mizrahi, Peretz, Biton, Dahan, Avraham, Friedman, Azulay, Katz,
+           Yosef, Malka, Amar, Ohana, Shapiro, Ben-David, Gabay, Hadad, Golan, Stern]
+
+# Legal-form suffix for company names built from a surname (non-Latin locales).
+company_suffix:
+  ja_JP: K.K.
+  zh_CN: Co., Ltd.
+  ru_RU: OOO
+  ar_SA: Trading Co.
+  he_IL: Ltd.
+  el_GR: S.A.
+  el_CY: Ltd.
+
+# Person-type entities get a synthetic date of birth (needed by sanctions decoys).
+person_entity_types: [Individual, Sole Proprietorship]
+age_range_years: [22, 80]
+reference_date: 2022-09-01
