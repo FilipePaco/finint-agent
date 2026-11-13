@@ -8,7 +8,7 @@ from typing import BinaryIO
 
 import pytest
 
-from finint.data.download import _https_open, download, file_url
+from finint.data.download import download, file_url, https_open
 from finint.data.sources import AmlWorldFiles
 
 
@@ -49,4 +49,4 @@ def test_url_points_to_public_kaggle_endpoint() -> None:
 
 def test_refuses_non_https() -> None:
     with pytest.raises(ValueError, match="non-HTTPS"):
-        _https_open("http://example.com/file.csv")
+        https_open("http://example.com/file.csv")
