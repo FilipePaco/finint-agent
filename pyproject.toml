@@ -40,6 +40,7 @@ packages = ["src/finint"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = ["-q", "--strict-markers"]
 markers = [
   "slow: needs the full dataset or long-running training",
@@ -55,7 +56,7 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S311"]  # asserts; seeded RNG for test data, not crypto
 
 [tool.ruff.lint.isort]
 known-first-party = ["finint"]
