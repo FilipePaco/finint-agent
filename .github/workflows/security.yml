@@ -1,0 +1,26 @@
+name: security
+
+# SAST runs through ruff's bandit rules (S) in quality.yml.
+# This workflow audits third-party dependencies for known CVEs (SCA).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Export locked dependencies
+        run: uv export --locked --all-groups --no-hashes --no-emit-project --format requirements-txt > requirements-audit.txt
+      - name: Audit
+        run: uvx pip-audit --strict --progress-spinner off -r requirements-audit.txt
