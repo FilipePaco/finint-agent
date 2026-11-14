@@ -2,13 +2,13 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify
+.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify app
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 
 install: ## Create the venv with dev tools
-	$(UV) sync --group dev --group data --group ml --group agent
+	$(UV) sync --group dev --group data --group ml --group agent --group ui
 
 lint: ## Ruff lint + format check
 	$(UV) run ruff check .
@@ -49,3 +49,6 @@ audit-verify: ## Recompute the audit hash chain
 
 report-ml: ## ML report and figures from saved artifacts (spec 02)
 	$(UV) run finint ml report
+
+app: ## Analyst console (Streamlit) on http://localhost:8501
+	$(UV) run streamlit run src/finint/app/console.py

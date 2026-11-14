@@ -1,0 +1,10 @@
+# Who may open the analyst console (R3.11). In production this is the bank's SSO with an
+# AML-analyst role; here a fixed allowlist demonstrates that case files are role-gated and
+# that no customer-facing surface can read them.
+analysts:
+  - id: analyst-1
+    name: Analyst One
+    role: analyst
+  - id: supervisor-1
+    name: Supervisor One
+    role: supervisor
