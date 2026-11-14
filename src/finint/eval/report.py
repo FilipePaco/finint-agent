@@ -230,39 +230,44 @@ def build_eval_report(
     others = {k: v for k, v in summaries.items() if k != "main"}
     if others:
         rows = []
-        for name, summ in [("main", main), *others.items()]:
-            dd, ff, pp, ee = (
-                summ["disposition"],
-                summ["faithfulness"],
-                summ["patterns"],
-                summ["efficiency"],
-            )
-            rows.append(
-                (
-                    name,
-                    dd["n"],
-                    _pct(dd["accuracy"]),
-                    _pct(dd["escalation_recall"]),
-                    _pct(ff["first_draft_grounded"]),
-                    _pct(pp["recall"]),
-                    f"${_num(ee['cost_mean_usd'], 4)}",
-                    f"{_num(ee['latency_p50_s'], 0)} s",
+        for name in others:
+            ids = {r["alert_id"] for r in results[name] if not r.get("paired_clean")}
+            base = summarize([r for r in results["main"] if r["alert_id"] in ids])
+            for label, summ in ((f"main (same {len(ids)} cases)", base), (name, others[name])):
+                dd, ff, pp, ee = (
+                    summ[k] for k in ("disposition", "faithfulness", "patterns", "efficiency")
                 )
-            )
+                rows.append(
+                    (
+                        label,
+                        dd["n"],
+                        _pct(dd["accuracy"]),
+                        _pct(dd["escalation_recall"]),
+                        str(dd["missed_laundering_closed"]),
+                        _pct(ff["first_draft_grounded"]),
+                        _pct(pp["recall"]),
+                        _num(ee["tool_calls_mean"], 1),
+                        f"${_num(ee['cost_mean_usd'], 4)}",
+                    )
+                )
         sections += [
-            "## Configurations and ablations",
-            "Same cases (or a subset where noted by n). `flash-investigator`: Gemini Flash as "
-            "investigator. `no-skills`: no playbooks. `no-reviewer`: reviewer node skipped.",
+            "## Configurations compared on the same cases",
+            "Each configuration is compared with `main` restricted to exactly the alerts it ran. "
+            "`harness-v2`: coverage gate (detect_patterns, counterparties, trace_flows and "
+            "screening must run on the alerted account before a case is accepted), calibrated "
+            "base rate and a decision rubric in the prompt, stricter reviewer on closures. "
+            "`flash-reviewer`: Gemini Flash as reviewer (free tier: 20 requests a day).",
             _table(
                 [
                     "Config",
                     "n",
                     "Accuracy",
                     "Laundering escalated",
+                    "Laundering closed",
                     "First draft grounded",
                     "Pattern recall",
+                    "Tool calls",
                     "Cost/case",
-                    "Latency p50",
                 ],
                 rows,
             ),

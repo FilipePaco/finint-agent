@@ -135,3 +135,7 @@ LangGraph `SqliteSaver` keyed by `run_id`, so a paused case survives an app rest
 ### ADR-03.7 Streamlit console (vs FastAPI + frontend)
 **Decision:** Streamlit, internal only, with a role check.
 **Why:** it is the fastest way to a usable HITL review screen and doubles as the demo. A customer-facing API is out of scope. Its absence is itself the tipping-off control, asserted by a test.
+
+### ADR-03.8 Harness v2: coverage gate and decision rubric (vs relying on the prompt alone)
+**Decision:** the investigator cannot submit until four core tools have run on the alerted account (code-enforced, audited); the prompt adds the alert base rate (from validation) and a rubric (close only when every tested typology is rejected *and* a benign explanation is evidenced); the reviewer challenges unsupported closures.
+**Why:** measured on the baseline evaluation. Flash-Lite used about 4 of its 20 tool calls, confirmed a typology in a third of laundering cases and recommended closing many laundering alerts. The failures were shallow investigations, not reasoning limits, so structure in the harness is cheaper than a larger model (the free tier allows 20 Gemini Flash requests a day). The A/B on the same cases is in `reports/eval_report.md`.

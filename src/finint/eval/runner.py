@@ -53,10 +53,12 @@ class EvalConfig:
     reviewer_model: str | None = None
     use_skills: bool = True
     use_reviewer: bool = True
+    harness: str = "v2"  # v1 = baseline prompts and no coverage gate
 
 
 CONFIGS = {
-    "main": EvalConfig("main"),
+    "main": EvalConfig("main", harness="v1"),
+    "harness-v2": EvalConfig("harness-v2"),
     "flash-reviewer": EvalConfig("flash-reviewer", reviewer_model="gemini-3.5-flash"),
     "flash-investigator": EvalConfig("flash-investigator", investigator_model="gemini-3.5-flash"),
     "no-skills": EvalConfig("no-skills", use_skills=False),
@@ -71,6 +73,15 @@ def normalize_typology(name: str) -> str:
 
 def configure(base: Runtime, cfg: EvalConfig, make_model: Callable[[str], Any] | None) -> Runtime:
     rt = replace(base, use_reviewer=cfg.use_reviewer, memo_overrides=None)
+    if cfg.harness == "v1":
+        from finint.agents.llm import load_prompt
+
+        prompts = {
+            **rt.prompts,
+            "investigator": load_prompt("investigator-v1"),
+            "reviewer": load_prompt("reviewer-v1"),
+        }
+        rt = replace(rt, prompts=prompts, required_steps=())
     if not cfg.use_skills:
         rt = replace(rt, skills=SkillLibrary(None))
     for role, model in (("investigator", cfg.investigator_model), ("reviewer", cfg.reviewer_model)):
