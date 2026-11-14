@@ -31,8 +31,9 @@ PROMPTS_DIR = PROJECT_ROOT / "prompts"
 def make_model(spec: ModelRole, settings: Settings) -> BaseChatModel:
     if spec.provider == "google_genai" and settings.google_api_key is not None:
         os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key.get_secret_value())
+    # Retries with backoff cover rate limits (free tier) and transient provider errors.
     model: BaseChatModel = init_chat_model(
-        spec.model, model_provider=spec.provider, temperature=spec.temperature
+        spec.model, model_provider=spec.provider, temperature=spec.temperature, max_retries=6
     )
     return model
 

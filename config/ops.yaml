@@ -1,0 +1,10 @@
+# Weekly operations report (spec 04, R4.5).
+# Manual evidence-gathering time per alert BEFORE the agent. Not in the data: a documented
+# assumption for a mid-complexity transaction-monitoring alert (account history,
+# counterparties, flows, sanctions and news by hand). The report shows it as an assumption.
+manual_minutes_per_alert: 40
+# Simulated history for the long charts: daily alert counts are drawn from the observed full
+# days (+/- noise), seeded. Every simulated value is labelled SIMULATED.
+simulation:
+  noise: 0.10
+  seed: 42

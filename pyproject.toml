@@ -83,6 +83,7 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S311"]  # asserts; seeded RNG for test data, not crypto
+"docs/*.py" = ["E501"]  # diagram scripts: long lines are box copy, not logic
 
 [tool.ruff.lint.isort]
 known-first-party = ["finint"]

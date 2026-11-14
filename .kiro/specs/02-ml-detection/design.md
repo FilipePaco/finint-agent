@@ -47,7 +47,7 @@ Plot precision@k and alerts/day vs threshold on validation. Pick the threshold w
 `reports/ml_report.md`, `reports/figures/pr_curves.png`, `reliability.png`, `typology_recall.png`, `threshold_tradeoff.png`.
 
 ## Model card
-Each champion artifact ships `model_card.md` (pattern from `pig_finserv/modeling/model_card.py`): intended use, training window, features, metrics on test (PR-AUC, precision@budget, per-typology recall), calibration, threshold and capacity assumption, known limitations (synthetic data, short time span, typologies with few positives), and `model_version`.
+Each champion artifact ships `model_card.md` (adapted from an earlier personal project): intended use, training window, features, metrics on test (PR-AUC, precision@budget, per-typology recall), calibration, threshold and capacity assumption, known limitations (synthetic data, short time span, typologies with few positives), and `model_version`.
 
 ## Architecture decision records
 

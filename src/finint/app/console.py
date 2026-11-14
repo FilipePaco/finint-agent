@@ -7,7 +7,12 @@ Internal tool for FinCrime analysts only. Every data access goes through
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
 from typing import Any
+
+if "finint" not in sys.modules:  # hosted demo: run from a checkout without installing
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pandas as pd
 import streamlit as st
@@ -26,9 +31,22 @@ STATUS_LABEL = {
 st.set_page_config(page_title="finint · analyst console", layout="wide")
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Building the synthetic demo world (about 30 seconds)…")
 def service() -> CaseService:
-    return CaseService(get_settings())
+    settings = get_settings()
+    # Demo when asked for, or when there is no local database (e.g. a fresh hosted checkout).
+    if not settings.demo and settings.duckdb_path.is_file():
+        return CaseService(settings)
+    import tempfile
+
+    from finint.data.synthetic import build_world
+    from finint.eval.replay import Cassette
+    from finint.eval.replay_run import CASSETTE, replay_runtime
+
+    root = Path(tempfile.mkdtemp(prefix="finint-demo-"))
+    world = build_world(root / "data", root / "reports")
+    runtime = replay_runtime(world["settings"], Cassette(CASSETTE), None)
+    return CaseService(world["settings"], runtime=runtime)
 
 
 def sign_in() -> Analyst | None:
@@ -47,8 +65,7 @@ def sign_in() -> Analyst | None:
     if st.sidebar.button("Sign out"):
         st.session_state.clear()
         st.rerun()
-    mode = "live LLM (Gemini)" if service().llm_available else "offline demo (no LLM key)"
-    st.sidebar.caption(f"Mode: {mode}")
+    st.sidebar.caption(f"Mode: {service().mode}")
     if st.sidebar.button("Verify audit chain"):
         try:
             st.sidebar.success(f"Chain intact: {service().verify_audit(analyst):,} events")
@@ -60,7 +77,7 @@ def sign_in() -> Analyst | None:
 def queue_tab(analyst: Analyst) -> None:
     rows = service().queue(analyst)
     if not rows:
-        st.info("No alerts. Run `make alerts` first.")
+        st.info("No alerts. Run `make alerts` first (or start the demo with FININT_DEMO=1).")
         return
     frame = pd.DataFrame(rows)
     frame["status"] = frame["status"].map(STATUS_LABEL)

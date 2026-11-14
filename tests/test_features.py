@@ -13,8 +13,8 @@ import pytest
 from finint.data.ingest import ingest
 from finint.data.normalize import normalize
 from finint.data.sources import AmlWorldFiles
+from finint.data.synthetic import write_dataset
 from finint.ml.features import FEATURES, build_tabular_features
-from synthetic_amlworld import write_dataset
 
 FX = {"US Dollar": 1.0}
 

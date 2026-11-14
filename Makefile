@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify app
+.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify app eval-build eval eval-report report docs
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -52,3 +52,18 @@ report-ml: ## ML report and figures from saved artifacts (spec 02)
 
 app: ## Analyst console (Streamlit) on http://localhost:8501
 	$(UV) run streamlit run src/finint/app/console.py
+
+eval-build: ## Build the evaluation set (spec 04)
+	$(UV) run finint eval build
+
+eval: ## Run the agent evaluation (needs GOOGLE_API_KEY; resumable)
+	$(UV) run finint eval run --config main
+
+eval-report: ## Metrics and reports/eval_report.md from eval/results
+	$(UV) run finint eval report
+
+report: ## Weekly operations report with the two charts (spec 04)
+	$(UV) run finint report weekly
+
+docs: ## Render docs/architecture.pdf and .png
+	$(UV) run python docs/architecture.py

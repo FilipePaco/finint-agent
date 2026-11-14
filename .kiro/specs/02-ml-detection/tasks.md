@@ -12,4 +12,4 @@
 - [x] 2.10 `make alerts`: alerts table with SHAP top-5, model_version, audit events · _R2.8_
 - [x] 2.11 `tools/ml.py`: `ml_score`, `explain_alert` · _R2.9_
 - [x] 2.12 `reports/ml_report.md` generator · _R2.5_
-- [x] 2.13 Model card per champion artifact (**port from `pig_finserv/modeling/model_card.py`**) · _R2.8_
+- [x] 2.13 Model card per champion artifact (**adapted from an earlier personal project**) · _R2.8_

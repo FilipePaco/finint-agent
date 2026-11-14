@@ -1,6 +1,6 @@
 # 03 · Investigation Agent: Test Strategy
 
-Convention (from HealthCareAI): every test references a requirement. **Every guardrail has at least one rejection test**, i.e. a test that proves the bad thing is blocked, not just that the good path works.
+Convention: every test references a requirement. **Every guardrail has at least one rejection test**, i.e. a test that proves the bad thing is blocked, not just that the good path works.
 
 ## Layers
 | Layer | What | LLM? | Runs in CI |

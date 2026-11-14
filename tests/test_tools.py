@@ -12,11 +12,11 @@ import pytest
 
 from finint.config import Settings, load_yaml
 from finint.data.build import build
+from finint.data.synthetic import write_dataset
 from finint.tools import investigation as tools
 from finint.tools.media import FixtureProvider, SearchNotPermittedError, check_permitted
 from finint.tools.sanctions import screen_party
 from finint.tools.skills import SkillLibrary, UnknownSkillError
-from synthetic_amlworld import write_dataset
 
 ROOT = Path(__file__).parents[1]
 LABELS = {"is_laundering", "typology", "attempt_id", "is_injected", "injection_case_id"}

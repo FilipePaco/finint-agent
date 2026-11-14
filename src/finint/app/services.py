@@ -44,17 +44,25 @@ def _require(analyst: Analyst | None) -> Analyst:
 
 
 class CaseService:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, runtime: Any | None = None) -> None:
+        """``runtime`` overrides the live one (the hosted demo replays recorded responses)."""
         self.settings = settings
         self.audit = AuditLog(settings.audit_db_path)
+        self._runtime = runtime
 
     @property
     def llm_available(self) -> bool:
-        return llm_available(self.settings)
+        return self._runtime is not None or llm_available(self.settings)
+
+    @property
+    def mode(self) -> str:
+        if self._runtime is not None:
+            return "demo: synthetic data, replayed Gemini responses"
+        return "live LLM (Gemini)" if llm_available(self.settings) else "offline (no LLM key)"
 
     @cached_property
     def graph(self) -> Any:
-        runtime = build_runtime(self.settings)
+        runtime = self._runtime or build_runtime(self.settings)
         return build_graph(
             runtime, sqlite_checkpointer(self.settings.data_dir / "checkpoints.sqlite")
         )

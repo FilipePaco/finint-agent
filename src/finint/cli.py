@@ -20,6 +20,10 @@ ml_app = typer.Typer(no_args_is_help=True, help="Train and evaluate detection mo
 app.add_typer(ml_app, name="ml")
 audit_app = typer.Typer(no_args_is_help=True, help="Inspect the audit trail.")
 app.add_typer(audit_app, name="audit")
+eval_app = typer.Typer(no_args_is_help=True, help="Evaluate the investigation agent (spec 04).")
+app.add_typer(eval_app, name="eval")
+report_app = typer.Typer(no_args_is_help=True, help="Operational reports (spec 04).")
+app.add_typer(report_app, name="report")
 
 
 @audit_app.command("verify")
@@ -287,3 +291,180 @@ def investigate(
         )
         resume(graph, run_id, choice)
         typer.echo(f"decision recorded: {choice.action} -> {choice.final_disposition}")
+
+
+EVAL_SET = "eval/eval_set.jsonl"
+
+
+@eval_app.command("build")
+def eval_build() -> None:
+    """Build eval/eval_set.jsonl (natural + forced alerts) and register forced alerts."""
+    from collections import Counter
+
+    from finint.core.audit import AuditLog
+    from finint.eval.dataset import build_eval_set, write_eval_set
+    from finint.ml.alerts import load_champion
+    from finint.ml.registry import choose_champion, latest_artifacts
+
+    settings = get_settings()
+    info, _ = choose_champion(latest_artifacts(settings.artifacts_dir))
+    cases = build_eval_set(
+        settings.duckdb_path,
+        load_champion(info.path),
+        info.path / "calibrator.json",
+        AuditLog(settings.audit_db_path),
+        settings.seed,
+    )
+    path = write_eval_set(cases, settings.config_dir.parent / EVAL_SET)
+    typer.echo(f"{len(cases)} cases -> {path}: {dict(Counter(c.source for c in cases))}")
+
+
+@eval_app.command("run")
+def eval_run(
+    config: Annotated[
+        str, typer.Option(help="main, flash-investigator, no-skills, no-reviewer")
+    ] = "main",
+    limit: Annotated[int | None, typer.Option(help="Run at most N pending cases")] = None,
+    paired: Annotated[
+        bool, typer.Option(help="Also run injection cases without the payload")
+    ] = True,
+    only: Annotated[str | None, typer.Option(help="Comma-separated alert ids")] = None,
+) -> None:
+    """Run the agent on the eval set (resumable; finished cases are skipped)."""
+    from finint.agents.llm import make_model
+    from finint.agents.runtime import build_runtime, llm_available
+    from finint.config import ModelRole
+    from finint.data.memos import load_injection_cases
+    from finint.eval.dataset import load_eval_set
+    from finint.eval.runner import CONFIGS, configure, results_path, run_eval
+
+    settings = get_settings()
+    if not llm_available(settings):
+        typer.echo(
+            "No LLM key configured (GOOGLE_API_KEY); the evaluation needs a live model.", err=True
+        )
+        raise typer.Exit(code=2)
+    cfg = CONFIGS[config]
+    root = settings.config_dir.parent
+    cases = load_eval_set(root / EVAL_SET)
+    if only:
+        wanted = set(only.split(","))
+        cases = [c for c in cases if c.alert_id in wanted]
+    payloads = {
+        c.id: c.payload
+        for c in load_injection_cases(settings.injections_dir / "prompt_injections.yaml")
+    }
+    rt = configure(
+        build_runtime(settings), cfg, lambda model: make_model(ModelRole(model=model), settings)
+    )
+    n = run_eval(
+        rt,
+        cases,
+        cfg,
+        results_path(root, cfg),
+        payloads=payloads,
+        paired=paired,
+        limit=limit,
+        log=typer.echo,
+    )
+    typer.echo(f"ran {n} case(s) for config {cfg.name}")
+
+
+@eval_app.command("report")
+def eval_report() -> None:
+    """Write reports/eval_report.md from eval/results plus screener metrics on injected cases."""
+    from finint.config import load_yaml
+    from finint.core.audit import AuditLog
+    from finint.data.inject import load_sanctions_cases
+    from finint.data.memos import load_injection_cases
+    from finint.eval.report import build_eval_report, load_results, refresh_echo
+    from finint.tools.sanctions import _freeze, load_screener
+
+    settings = get_settings()
+    root = settings.config_dir.parent
+    config = load_yaml("screening", settings.config_dir)
+    screener = load_screener(
+        settings.duckdb_path, tuple(sorted((k, _freeze(v)) for k, v in config.items()))
+    )
+    cases = load_sanctions_cases(settings.injections_dir / "sanctions_cases.yaml")
+    true_found = decoys_cleared = 0
+    for case in cases:
+        result = screener.screen(case.name, case.kind, case.country, case.dob)
+        hit = [c for c in result.candidates if c.ent_num == case.sdn_ent_num]
+        status = hit[0].match_status if hit else "NO_MATCH"
+        if case.expected == "TRUE_MATCH":
+            true_found += status == "MATCH"
+        else:
+            decoys_cleared += status != "MATCH"
+    n_true = sum(c.expected == "TRUE_MATCH" for c in cases)
+    screening = {
+        "n": len(cases),
+        "n_true": n_true,
+        "n_decoys": len(cases) - n_true,
+        "true_matches_found": true_found,
+        "decoys_cleared": decoys_cleared,
+    }
+    results = load_results(root / "eval" / "results")
+    refresh_echo(
+        results,
+        AuditLog(settings.audit_db_path),
+        {
+            c.id: c.payload
+            for c in load_injection_cases(settings.injections_dir / "prompt_injections.yaml")
+        },
+    )
+    text = build_eval_report(results, screening)
+    out = settings.reports_dir / "eval_report.md"
+    out.write_text(text, encoding="utf-8")
+    typer.echo(f"wrote {out}")
+
+
+@report_app.command("weekly")
+def report_weekly() -> None:
+    """Write reports/ops_report_<week>.md with the five metrics and the two charts."""
+    from finint.config import load_yaml
+    from finint.core.audit import AuditLog
+    from finint.eval.ops_report import build_ops_report
+
+    settings = get_settings()
+    week, text = build_ops_report(
+        settings.duckdb_path,
+        AuditLog(settings.audit_db_path),
+        settings.as_of_date,
+        load_yaml("ops", settings.config_dir),
+        settings.reports_dir / "figures",
+    )
+    out = settings.reports_dir / f"ops_report_{week}.md"
+    out.write_text(text, encoding="utf-8")
+    typer.echo(f"wrote {out}")
+
+
+@eval_app.command("record")
+def eval_record() -> None:
+    """Record live Gemini responses on the synthetic world for the CI replay (needs a key)."""
+    import tempfile
+    from pathlib import Path
+
+    from finint.agents.llm import make_model
+    from finint.agents.runtime import ROLES, llm_available
+    from finint.data.synthetic import build_world
+    from finint.eval.replay import Cassette
+    from finint.eval.replay_run import CASSETTE, replay_runtime, run_alerts
+
+    settings = get_settings()
+    if not llm_available(settings):
+        typer.echo("Recording needs GOOGLE_API_KEY.", err=True)
+        raise typer.Exit(code=2)
+    with tempfile.TemporaryDirectory() as tmp:
+        world = build_world(Path(tmp) / "data", Path(tmp) / "reports")
+        live = {role: make_model(getattr(settings, role), settings) for role in ROLES}
+        cassette = Cassette(CASSETTE)
+        cassette.entries = {}
+        runs = run_alerts(replay_runtime(world["settings"], cassette, live), world["alerts"])
+        cassette.save()
+    for run in runs:
+        typer.echo(
+            f"{run['alert_id']}: {run['payload'].get('status')} "
+            f"{(run['payload'].get('policy') or {}).get('disposition')}"
+        )
+    typer.echo(f"recorded {len(cassette.entries)} responses -> {CASSETTE}")

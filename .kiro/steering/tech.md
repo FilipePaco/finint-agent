@@ -17,7 +17,7 @@ inclusion: always
 | GNN | PyTorch + PyTorch Geometric (GraphSAGE, edge classification) | role names PyTorch; deep-learning fundamentals |
 | Calibration / metrics | scikit-learn (isotonic), custom precision@k | |
 | Agents | **LangGraph** (thin): explicit graph, `interrupt` for HITL, SQLite checkpointer | the graph is visible; critical rules stay in plain Python |
-| LLM | **Gemini** via `init_chat_model`, version-pinned per agent role (Flash-Lite / Flash). PoC runs on the **free tier** with fully synthetic data; production would use a paid tier or Vertex AI (prompts not used for training) | provider-agnostic: an open-weight model (Ollama) is a config change; not run here (laptop disk) |
+| LLM | **Gemini** via `init_chat_model`, version-pinned per agent role: Flash-Lite for all three agents in the PoC (the free tier allows only 20 Gemini Flash requests a day); Flash as an optional reviewer. PoC runs on the **free tier** with fully synthetic data; production would use a paid tier or Vertex AI (prompts not used for training) | provider-agnostic: an open-weight model (Ollama) is a config change; not run here (laptop disk) |
 | Structured output | Pydantic v2 models for every LLM output | validation, retries, schema-first |
 | Observability | **Langfuse** (LangChain `CallbackHandler`; self-hosted via docker compose or Langfuse Cloud) for traces, latency, token and cost per trace/agent, eval scores. Token counts in-process come from LangChain's built-in `UsageMetadataCallbackHandler`, and USD comes from Langfuse's model pricing (or the `genai-prices` package when Langfuse is off) | use maintained tools instead of hand-rolled trackers; optional by design (constitution VI) |
 | Name screening | `rapidfuzz` + `unidecode` | deterministic, explainable scores |
@@ -48,12 +48,8 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF", "PT"]
 - Modules in `core/` must not import LangChain/LangGraph (constitution X).
 - If the LLM is unavailable, the graph degrades to a deterministic evidence pack with disposition `NEEDS_MORE_INFO`. It never crashes the analyst's queue.
 
-## Reused from previous projects
-| From | What |
-|---|---|
-| `HealthCareAI` | ADR format in design docs; pydantic-settings config; `init_chat_model` factory; tool-calling loop with `response_format="content_and_artifact"` + max iterations + deterministic fallback; two-layer audit/observability idea with Langfuse; `TEST_PLAN` (test ↔ requirement, one rejection test per guardrail); `docs/audit.md` for reviewers; Railway deploy notes |
-| `pig_finserv` | `pyproject.toml` layout (hatchling, uv, dependency groups, Typer entry point); hash-chained `audit.py` with `AuditIntegrityError`; `modeling/` split, calibration, versioned artifact, model card; Dockerfile with `uv sync --locked`; `.gitignore`/`.env.example` |
-| `CantadasProject` | GitHub Actions security workflow (SAST + pip-audit) |
+## Reused from earlier personal projects
+The ADR format, pydantic-settings config, LLM factory, tool-calling loop with a deterministic fallback, the hash-chained audit log, the model card, the Docker setup and the security CI workflow were adapted from earlier personal projects, so tasks marked *adapted* started from proven code.
 
 ## Commands
 `make data` · `make train` · `make alerts` · `make eval` · `make eval-record` · `make report` · `make app` · `make docs` · `make test` · `make lint` · `make audit-verify`
