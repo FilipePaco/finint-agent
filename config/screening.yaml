@@ -1,0 +1,9 @@
+# Sanctions screening thresholds (R3.4, ADR-03.4). Decided by code; the LLM only explains.
+name_score:
+  match: 90        # combined name score at or above this is a name hit
+  potential: 82    # at or above this is a potential hit worth an analyst's look
+weights:           # combined = weighted mean of the three scores (0-100)
+  token_sort: 0.3   # penalizes missing middle names: kept low
+  token_set: 0.5    # robust to missing tokens and word order
+  jaro_winkler: 0.2
+candidates: 10     # top-N SDN names/aliases scored in detail per query

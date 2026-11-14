@@ -3,13 +3,13 @@
 Write the tests in `test-strategy.md` before or alongside each core module.
 
 Core (framework-free, test first)
-- [ ] 3.1 `core/models.py`: Alert, Evidence, CaseFile, Disposition, AuditEvent, AnalystDecision · _R3.5, R3.8_
+- [x] 3.1 `core/models.py`: Alert, Evidence, CaseFile, Disposition, AuditEvent, AnalystDecision · _R3.5, R3.8_
 - [x] 3.2 `core/audit.py`: hash-chained append-only log + `AuditIntegrityError` + `make audit-verify` (**port from `pig_finserv/audit.py`**, swap triage fields for agent events) · _R3.12_
-- [ ] 3.3 `core/minimize.py` + test that label columns never reach a prompt · _R3.9_
-- [ ] 3.4 `core/screening.py` + tests on `sanctions_cases.yaml` · _R3.4_
-- [ ] 3.5 `core/grounding.py` + property tests · _R3.5_
-- [ ] 3.6 `core/policy.py` rules + tests · _R3.7_
-- [ ] 3.7 `core/injection.py` heuristic detector + tests on payload YAML · _R3.10_
+- [x] 3.3 `core/minimize.py` + test that label columns never reach a prompt · _R3.9_
+- [x] 3.4 `core/screening.py` + tests on `sanctions_cases.yaml` · _R3.4_
+- [x] 3.5 `core/grounding.py` + property tests · _R3.5_
+- [x] 3.6 `core/policy.py` rules + tests · _R3.7_
+- [x] 3.7 `core/injection.py` heuristic detector + tests on payload YAML · _R3.10_
 
 Tools & skills
 - [ ] 3.8 Read-only SQL tools (parameterized, ruff `S` clean) with `content_and_artifact` + evidence registration · _R3.1_

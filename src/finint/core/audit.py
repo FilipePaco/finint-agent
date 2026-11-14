@@ -144,11 +144,18 @@ class AuditLog:
                     "run_id, alert_id, payload_json, prev_hash, hash) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
-                        seq, fields["event_id"], fields["occurred_at"], event.event_type,
-                        event.actor, event.run_id, event.alert_id,
-                        _canonical(fields["payload"]), prev, digest,
+                        seq,
+                        fields["event_id"],
+                        fields["occurred_at"],
+                        event.event_type,
+                        event.actor,
+                        event.run_id,
+                        event.alert_id,
+                        _canonical(fields["payload"]),
+                        prev,
+                        digest,
                     ),
-                )  # fmt: skip
+                )
                 stored.append(StoredEvent(hash=digest, **fields))
                 prev = digest
         return stored
@@ -173,11 +180,19 @@ class AuditLog:
             rows = con.execute(sql + " ORDER BY seq", params).fetchall()
         return [
             StoredEvent(
-                event_id=r[0], seq=r[1], occurred_at=r[2], event_type=r[3], actor=r[4],
-                run_id=r[5], alert_id=r[6], payload=json.loads(r[7]), prev_hash=r[8], hash=r[9],
+                event_id=r[0],
+                seq=r[1],
+                occurred_at=r[2],
+                event_type=r[3],
+                actor=r[4],
+                run_id=r[5],
+                alert_id=r[6],
+                payload=json.loads(r[7]),
+                prev_hash=r[8],
+                hash=r[9],
             )
             for r in rows
-        ]  # fmt: skip
+        ]
 
     def verify(self) -> int:
         """Recompute the whole chain. Returns the number of events verified."""
