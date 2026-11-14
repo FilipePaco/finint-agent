@@ -27,6 +27,6 @@ Agents & graph
 - [x] 3.18 CLI: `finint investigate <alert_id>` (prints case + audit trail)
 
 Console & docs
-- [ ] 3.19 Streamlit analyst console with role check, approve/edit/reject + diff audit · _R3.8, R3.11_
-- [ ] 3.20 `compose.yaml` profile `observability` running self-hosted Langfuse · _R3.14_
-- [ ] 3.21 `docs/audit.md`: how to read the audit trail, verify the chain, and open the matching Langfuse trace (**pattern from HealthCareAI `docs/auditoria.md`**) · _R3.12_
+- [x] 3.19 Streamlit analyst console with role check, approve/edit/reject + diff audit · _R3.8, R3.11_
+- [x] 3.20 `compose.yaml` runs the console; Langfuse via its official compose or Cloud (v3 self-host needs Postgres, ClickHouse, Redis, MinIO; not duplicated here) · _R3.14_
+- [x] 3.21 `docs/audit.md`: how to read the audit trail, verify the chain, and open the matching Langfuse trace (**pattern from HealthCareAI `docs/auditoria.md`**) · _R3.12_
