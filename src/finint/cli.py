@@ -251,3 +251,39 @@ def ml_report() -> None:
     out = settings.reports_dir / "ml_report.md"
     out.write_text(text, encoding="utf-8")
     typer.echo(f"wrote {out}")
+
+
+@app.command()
+def investigate(
+    alert_id: Annotated[str, typer.Argument(help="Alert id, e.g. AL-20220909-0001")],
+    decision: Annotated[
+        str | None, typer.Option(help="Record an analyst decision now: APPROVE, EDIT or REJECT")
+    ] = None,
+    final: Annotated[str | None, typer.Option(help="Final disposition for EDIT/REJECT")] = None,
+    reason: Annotated[str, typer.Option(help="Required for EDIT and REJECT")] = "",
+    analyst: Annotated[str, typer.Option(help="Analyst id")] = "cli-analyst",
+    live_media: Annotated[bool, typer.Option(help="Use Tavily instead of fixtures")] = False,
+) -> None:
+    """Run the multi-agent investigation for one alert and stop at the analyst decision."""
+    import json
+
+    from finint.agents.graph import build_graph, resume, sqlite_checkpointer, start
+    from finint.agents.runtime import build_runtime
+    from finint.core.models import AnalystDecision
+
+    settings = get_settings()
+    runtime = build_runtime(settings, live_media=live_media)
+    graph = build_graph(runtime, sqlite_checkpointer(settings.data_dir / "checkpoints.sqlite"))
+    run_id, payload = start(graph, alert_id)
+    typer.echo(json.dumps(payload, indent=2, default=str))
+    typer.echo(f"\nrun_id: {run_id} (waiting for the analyst)")
+    if decision:
+        recommended = (payload.get("policy") or {}).get("disposition") or "NEEDS_MORE_INFO"
+        choice = AnalystDecision(
+            action=decision.upper(),
+            analyst_id=analyst,
+            reason=reason,
+            final_disposition=final or recommended,
+        )
+        resume(graph, run_id, choice)
+        typer.echo(f"decision recorded: {choice.action} -> {choice.final_disposition}")
