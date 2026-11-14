@@ -93,6 +93,13 @@ class Runtime:
     tool_budget: int = 20
     config_factory: Callable[[str, str], dict[str, Any]] | None = None
     use_reviewer: bool = True  # ablation switch (R4.3)
+    # Harness v2 coverage gate: tools that must run on the alerted account before submitting.
+    required_steps: tuple[str, ...] = (
+        "detect_patterns",
+        "get_counterparties",
+        "trace_flows",
+        "screen_sanctions",
+    )
     memo_overrides: dict[int, str] | None = None  # evaluation-only counterfactual (R4.2)
 
     def ctx(self, evidence: dict[str, Evidence] | None = None) -> ToolContext:
@@ -180,6 +187,8 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             on_llm_call=rt.recorder("investigator", run_id, alert_id),
             config=rt.llm_config(run_id, alert_id),
             tool_budget=rt.tool_budget,
+            alert_account=state["evidence"]["ev-001"].data.get("account_key"),
+            required_steps=rt.required_steps,
         )
         result = run_investigator(
             rt.models["investigator"],

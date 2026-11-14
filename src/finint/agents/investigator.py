@@ -98,6 +98,9 @@ class InvestigatorDeps:
     on_llm_call: Callable[[AIMessage | None, float, str | None], None]
     config: RunnableConfig | None = None
     tool_budget: int = DEFAULT_TOOL_BUDGET
+    # Harness v2: tools that must have run on the alerted account before a case is accepted.
+    alert_account: str | None = None
+    required_steps: tuple[str, ...] = ()
 
 
 @dataclass
@@ -158,6 +161,18 @@ def _execute(name: str, args: dict[str, Any], deps: InvestigatorDeps, skills: li
     return f"[{evidence.evidence_id}] {evidence.summary}"
 
 
+def missing_steps(deps: InvestigatorDeps) -> list[str]:
+    """Required tools not yet run on the alerted account (coverage gate, harness v2).
+
+    Derived from the run's evidence store, so coverage survives re-entries after a grounding
+    repair or a reviewer revision.
+    """
+    if not deps.required_steps or deps.alert_account is None:
+        return []
+    done = {(e.tool, e.args.get("account_key")) for e in deps.ctx.store}
+    return [t for t in deps.required_steps if (t, deps.alert_account) not in done]
+
+
 def _submit(args: dict[str, Any], alert_id: str) -> CaseFile | str:
     try:
         return CaseFile.model_validate({**args, "alert_id": alert_id})
@@ -203,6 +218,22 @@ def run_investigator(
         for call in response.tool_calls:
             call_id = call["id"] or call["name"]
             if call["name"] == "submit_case":
+                gaps = missing_steps(deps) if used < deps.tool_budget else []
+                if gaps:
+                    _audit(
+                        deps,
+                        "TOOL_CALL",
+                        {"tool": "submit_case", "rejected": "coverage gate", "missing": gaps},
+                    )
+                    messages.append(
+                        ToolMessage(
+                            "ERROR: investigation incomplete. Before submitting, run these "
+                            f"tools on the alerted account {deps.alert_account}: "
+                            f"{', '.join(gaps)}.",
+                            tool_call_id=call_id,
+                        )
+                    )
+                    continue
                 result = _submit(call["args"], deps.alert_id)
                 if isinstance(result, CaseFile):
                     draft = result

@@ -113,8 +113,10 @@ def _gather(world: dict[str, Any]) -> Any:
     a = {"account_key": world["account"], "start": world["start"], "end": world["day"]}
     return ai(
         call("detect_patterns", a, "c1"),
-        call("load_skill", {"name": "fan-out"}, "c2"),
-        call("screen_sanctions", {"account_key": world["account"]}, "c3"),
+        call("get_counterparties", a, "c2"),
+        call("trace_flows", a, "c3"),
+        call("load_skill", {"name": "fan-out"}, "c4"),
+        call("screen_sanctions", {"account_key": world["account"]}, "c5"),
     )
 
 
@@ -309,3 +311,42 @@ def test_media_agent_keeps_only_verbatim_quotes() -> None:
     assert [f["category"] for f in check.verified] == ["ALLEGATION"]
     assert check.dropped[0]["drop_reason"] == "quote not found verbatim in document"
     assert check.queries == ["Velmora Freight Ltd"]
+
+
+def test_coverage_gate_refuses_a_shallow_case(world: dict[str, Any], tmp_path: Path) -> None:
+    shallow = ai(
+        call(
+            "detect_patterns",
+            {"account_key": world["account"], "start": world["start"], "end": world["day"]},
+            "s1",
+        )
+    )
+    rt = _runtime(world, tmp_path, [shallow, _submit(), _gather(world), _submit()])
+    run_id, payload = start(build_graph(rt, None), "AL-T-0001")
+    refused = [
+        e
+        for e in rt.audit.events(run_id=run_id)
+        if e.event_type == "TOOL_CALL" and e.payload.get("rejected") == "coverage gate"
+    ]
+    assert refused
+    assert set(refused[0].payload["missing"]) == {
+        "get_counterparties",
+        "trace_flows",
+        "screen_sanctions",
+    }
+    assert payload["status"] == "GROUNDED"
+
+
+def test_gate_can_be_disabled_for_the_baseline(world: dict[str, Any], tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    shallow = ai(
+        call(
+            "detect_patterns",
+            {"account_key": world["account"], "start": world["start"], "end": world["day"]},
+            "s1",
+        )
+    )
+    rt = replace(_runtime(world, tmp_path, [shallow, _submit()]), required_steps=())
+    _, payload = start(build_graph(rt, None), "AL-T-0001")
+    assert payload["status"] == "GROUNDED"
