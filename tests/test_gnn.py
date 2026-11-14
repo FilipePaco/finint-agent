@@ -24,10 +24,10 @@ from finint.data.ingest import ingest
 from finint.data.normalize import normalize
 from finint.data.sources import AmlWorldFiles
 from finint.data.split import SplitBoundaries, SplitFractions, split_boundaries
+from finint.data.synthetic import write_dataset
 from finint.ml.evaluation import evaluate_scores
 from finint.ml.features import NUMERIC, build_tabular_features
 from finint.ml.graph_features import build_graph_features
-from synthetic_amlworld import write_dataset
 
 pytestmark = pytest.mark.gnn
 

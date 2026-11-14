@@ -25,9 +25,9 @@ from finint.config import Settings, load_yaml
 from finint.core.audit import AuditLog
 from finint.core.models import AnalystDecision
 from finint.data.build import build
+from finint.data.synthetic import write_dataset
 from finint.tools.media import FixtureProvider
 from finint.tools.skills import SkillLibrary
-from synthetic_amlworld import write_dataset
 
 ROOT = Path(__file__).parents[1]
 MEDIA_DOCS = ROOT / "data" / "fixtures" / "media" / "documents.yaml"

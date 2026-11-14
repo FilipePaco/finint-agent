@@ -1,4 +1,4 @@
-"""Generate a small AMLworld-shaped dataset for end-to-end tests of ``finint data build``.
+"""A small AMLworld-shaped synthetic dataset (tests, CI replay and the hosted demo).
 
 Big enough for every injected case to find a candidate in the test window: laundering
 subjects (persons and companies), "mule" receivers, and clean counterparties that receive
@@ -11,6 +11,7 @@ import csv
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 HEADER = (
     "Timestamp,From Bank,Account,To Bank,Account,Amount Received,Receiving Currency,"
@@ -27,7 +28,7 @@ FORMATS = ["Cheque", "ACH", "Wire", "Credit Card", "Cash"]
 
 
 def write_dataset(raw_dir: Path, seed: int = 0) -> None:
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311 - seeded synthetic data, not security
     raw_dir.mkdir(parents=True, exist_ok=True)
     persons = [f"8{i:08X}"[:9] for i in range(1, 201)]
     companies = [f"9{i:08X}"[:9] for i in range(1, 101)]
@@ -93,3 +94,57 @@ def write_dataset(raw_dir: Path, seed: int = 0) -> None:
         blocks.extend(line(leg) for leg in legs)
         blocks.append(f"END LAUNDERING ATTEMPT - {typology}\n")
     (raw_dir / "HI-Small_Patterns.txt").write_text("\n".join(blocks), encoding="utf-8")
+
+
+def build_world(data_dir: Path, reports_dir: Path) -> dict[str, Any]:
+    """Synthetic dataset -> full data build (offline OFAC) -> two alerts the agent can investigate.
+
+    Deterministic: the same inputs produce the same database, so recorded LLM responses can be
+    replayed against it in CI.
+    """
+    import json
+
+    import duckdb
+
+    from finint.config import Settings
+    from finint.data.build import build
+
+    settings = Settings(data_dir=data_dir, reports_dir=reports_dir)
+    write_dataset(settings.raw_dir)
+    report = build(settings, offline=True, log=lambda _m: None)
+    alerts = []
+    with duckdb.connect(str(settings.duckdb_path)) as con:
+        con.execute(
+            "CREATE OR REPLACE TABLE alerts (alert_id VARCHAR PRIMARY KEY, account_key VARCHAR, "
+            "alert_date DATE, split VARCHAR, score DOUBLE, score_raw DOUBLE, threshold DOUBLE, "
+            "model_version VARCHAR, priority_rank INTEGER, top_txn_id BIGINT, "
+            "contributing_txn_ids BIGINT[], n_txn INTEGER, features_json VARCHAR, "
+            "shap_top5_json VARCHAR)"
+        )
+        con.execute(
+            "CREATE OR REPLACE TABLE alert_labels (alert_id VARCHAR PRIMARY KEY, "
+            "is_laundering BOOLEAN, n_laundering_txn INTEGER)"
+        )
+        for i, case in enumerate(("INJ-01", "INJ-05"), start=1):
+            txn = report.injected_prompts[case]
+            account, day = con.execute(
+                "SELECT from_key, ts::DATE FROM transactions WHERE txn_id = ?", [txn]
+            ).fetchone()  # type: ignore[misc]
+            txns = [
+                r[0]
+                for r in con.execute(
+                    "SELECT txn_id FROM transactions WHERE from_key = ? AND ts::DATE = ? "
+                    "ORDER BY amount_usd DESC LIMIT 10",
+                    [account, day],
+                ).fetchall()
+            ]
+            alert_id = f"AL-SYN-{i:04d}"
+            shap = [{"feature": "out_sum_1h", "value": 1.0, "contribution": 0.4}]
+            con.execute(
+                "INSERT INTO alerts VALUES (?, ?, ?, 'test', 0.9, 0.6, 0.45, 'synthetic', ?, ?, ?, "
+                "?, '{}', ?)",
+                [alert_id, account, day, i, txn, txns, len(txns), json.dumps(shap)],
+            )
+            con.execute("INSERT INTO alert_labels VALUES (?, true, 3)", [alert_id])
+            alerts.append(alert_id)
+    return {"settings": settings, "alerts": alerts, "report": report}

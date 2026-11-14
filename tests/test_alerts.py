@@ -14,12 +14,12 @@ from finint.data.ingest import ingest
 from finint.data.normalize import normalize
 from finint.data.sources import AmlWorldFiles
 from finint.data.split import SplitFractions, split_boundaries
+from finint.data.synthetic import write_dataset
 from finint.ml.alerts import generate_alerts, load_champion
 from finint.ml.dataset import load_frame
 from finint.ml.features import FEATURES, build_tabular_features
 from finint.ml.registry import ArtifactInfo, choose_champion
 from finint.ml.train import evaluate, save_artifact, train_lightgbm
-from synthetic_amlworld import write_dataset
 
 
 @pytest.fixture(scope="module")

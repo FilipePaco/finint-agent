@@ -12,7 +12,7 @@ import pytest
 from finint.app.services import Analyst, CaseService, authenticate
 from finint.config import Settings
 from finint.data.build import build
-from synthetic_amlworld import write_dataset
+from finint.data.synthetic import write_dataset
 
 ROOT = Path(__file__).parents[1]
 

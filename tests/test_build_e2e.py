@@ -7,7 +7,7 @@ import pytest
 
 from finint.config import Settings
 from finint.data.build import BuildReport, build
-from synthetic_amlworld import write_dataset
+from finint.data.synthetic import write_dataset
 
 
 @pytest.fixture(scope="module")
