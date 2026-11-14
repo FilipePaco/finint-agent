@@ -18,7 +18,7 @@ Prove the agent's quality, safety and cost with a reproducible evaluation. Produ
 - **Latency** (p50/p95 per case) and **cost** (tokens, searches, USD per case).
 
 ### R4.3 Model comparison and ablations
-- THE SYSTEM SHALL run the eval for ≥ 2 model configs (Gemini default; Ollama open-weight) and report a quality × cost table.
+- THE SYSTEM SHALL run the eval for ≥ 2 model configs (Gemini Flash-Lite and Gemini Flash for the agents) and report a quality × cost table.
 - THE SYSTEM SHALL run the ablations `no-skills` and `no-reviewer` on the default model and report their deltas.
 
 ### R4.4 One command, CI

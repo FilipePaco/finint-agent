@@ -5,7 +5,7 @@
 - [ ] 4.3 Runner with caching, bounded concurrency, auto-analyst stub · _R4.4_
 - [ ] 4.4 Record/replay LLM wrapper + CI replay job · _R4.4_
 - [ ] 4.5 Paired injection runs · _R4.2_
-- [ ] 4.6 Model configs (Gemini, Ollama) + ablations (no-skills, no-reviewer) · _R4.3_
+- [ ] 4.6 Model configs (Gemini Flash-Lite vs Flash) + ablations (no-skills, no-reviewer) · _R4.3_
 - [ ] 4.6b Push eval scores to Langfuse when configured (tagged by config) · _R4.4_
 - [ ] 4.7 `reports/eval_report.md` generator · _R4.2, R4.3_
 - [ ] 4.8 Weekly ops report + 2 charts + SIMULATED labeling · _R4.5_

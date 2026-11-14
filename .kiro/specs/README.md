@@ -48,4 +48,4 @@ See `.kiro/steering/tech.md` → *Reused from previous projects*. Tasks marked *
 | HITL, faithfulness, sanctions FP, tipping-off, minimization, injection, reputational risk | R3.3–R3.11 |
 | Architecture PDF; README; bonus hosted demo | R4.6 |
 
-Known gaps / risks: HI-Small covers only ~18 days (history for the charts is simulated and labeled); analyst decisions are simulated from labels; the manual-time baseline is an assumption; Ollama model quality may be low on a laptop (reported as-is).
+Known gaps / risks: HI-Small covers only ~18 days (history for the charts is simulated and labeled); analyst decisions are simulated from labels; the manual-time baseline is an assumption; the PoC uses the Gemini free tier (synthetic data only) and compares two Gemini tiers instead of a local open-weight model (no disk for local weights).

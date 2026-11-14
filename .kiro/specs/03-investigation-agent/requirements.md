@@ -77,7 +77,7 @@ For a selected alert, a multi-agent system gathers evidence with read-only tools
 - `observability.py` SHALL be the only module importing Langfuse.
 
 ### R3.13 Swappable LLM
-- THE SYSTEM SHALL build all chat models from config through one factory, supporting Gemini (default) and an Ollama open-weight model. Each agent's model is set independently.
+- THE SYSTEM SHALL build all chat models from config through one factory (`init_chat_model`), with the model set independently per agent role. Default: Gemini (Flash-Lite for investigator and media, Flash for reviewer), version-pinned. Any provider supported by `init_chat_model` (e.g. an open-weight model via Ollama) is a config change, not a code change.
 
 ## Open questions [NEEDS CLARIFICATION]
 - Q1: The reviewer uses the same model family as the investigator, but at a different tier (e.g., investigator on a fast/cheap Gemini model, reviewer on a stronger one). Proposal: yes. Eval reports the cost impact.
