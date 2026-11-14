@@ -45,13 +45,21 @@ class EvidenceStore:
             tool=tool,
             args=args,
             summary=summary if summary is not None else render(data),
-            data=data,
+            # JSON-safe copy (Decimal/datetime -> str) so run state can be checkpointed;
+            # values for grounding are extracted from the typed original first.
+            data=json.loads(json.dumps(data, default=str)),
             values=extract_values(data),
             untrusted=untrusted,
             injection_hits=injection_hits or [],
         )
         self._items[evidence_id] = evidence
         return evidence
+
+    @classmethod
+    def from_dict(cls, items: dict[str, Evidence]) -> EvidenceStore:
+        store = cls()
+        store._items = dict(items)
+        return store
 
     def get(self, evidence_id: str) -> Evidence:
         return self._items[evidence_id]
