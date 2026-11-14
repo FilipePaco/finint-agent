@@ -343,7 +343,7 @@ def main() -> None:
         16,
         15,
         "Google Gemini",
-        "Flash-Lite: investigator,\nmedia agent\nFlash: reviewer\nreceives minimized context\nonly (no labels, DOB→year)",
+        "Flash-Lite: all three\nagents (free tier);\nFlash: optional reviewer\nreceives minimized context\nonly (no labels, DOB→year)",
         LLM,
         LLM_EDGE,
     )
