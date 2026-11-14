@@ -12,10 +12,10 @@ Core (framework-free, test first)
 - [x] 3.7 `core/injection.py` heuristic detector + tests on payload YAML · _R3.10_
 
 Tools & skills
-- [ ] 3.8 Read-only SQL tools (parameterized, ruff `S` clean) with `content_and_artifact` + evidence registration · _R3.1_
-- [ ] 3.9 `detect_patterns` (code typology detectors reused from graph features) · _R3.1_
-- [ ] 3.10 Skills: 7 typologies + sanctions-review + case-writing · _R3.2_
-- [ ] 3.11 MediaProvider: FixtureProvider + TavilyProvider + permission gate (**contract adapted from `pig_finserv` `EvidenceSource`**) · _R3.3_
+- [x] 3.8 Read-only SQL tools (parameterized, ruff `S` clean) with `content_and_artifact` + evidence registration · _R3.1_
+- [x] 3.9 `detect_patterns` (code typology detectors reused from graph features) · _R3.1_
+- [x] 3.10 Skills: 7 typologies + sanctions-review + case-writing · _R3.2_
+- [x] 3.11 MediaProvider: FixtureProvider + TavilyProvider + permission gate (**contract adapted from `pig_finserv` `EvidenceSource`**) · _R3.3_
 
 Agents & graph
 - [ ] 3.12 LLM factory per role via `init_chat_model` (**port from HealthCareAI `llm.py`**), provider-agnostic, prompt versioning · _R3.13_
