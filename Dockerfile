@@ -10,10 +10,10 @@ WORKDIR /app
 
 # Dependency layer first, so code changes don't reinstall everything.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --locked --no-dev --no-install-project
+RUN uv sync --locked --no-dev --group agent --group ui --no-install-project
 
 COPY . ./
-RUN uv sync --locked --no-dev
+RUN uv sync --locked --no-dev --group agent --group ui
 
 ENTRYPOINT ["uv", "run", "--no-sync", "finint"]
 CMD ["--help"]
