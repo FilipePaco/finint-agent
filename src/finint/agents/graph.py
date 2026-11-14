@@ -92,10 +92,15 @@ class Runtime:
     prompts: dict[str, Prompt]
     tool_budget: int = 20
     config_factory: Callable[[str, str], dict[str, Any]] | None = None
+    use_reviewer: bool = True  # ablation switch (R4.3)
+    memo_overrides: dict[int, str] | None = None  # evaluation-only counterfactual (R4.2)
 
     def ctx(self, evidence: dict[str, Evidence] | None = None) -> ToolContext:
         return ToolContext(
-            self.settings.duckdb_path, self.classification, EvidenceStore.from_dict(evidence or {})
+            self.settings.duckdb_path,
+            self.classification,
+            EvidenceStore.from_dict(evidence or {}),
+            memo_overrides=self.memo_overrides or {},
         )
 
     def llm_config(self, run_id: str, alert_id: str) -> Any:
@@ -237,7 +242,9 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             return "analyst"
         if not state["grounding"] or not state["grounding"].passed:
             return "investigate"
-        return "policy" if state["status"] == "FALLBACK" else "review"
+        if state["status"] == "FALLBACK" or not rt.use_reviewer:
+            return "policy"
+        return "review"
 
     def review(state: InvestigationState) -> dict[str, Any]:
         draft = state["draft"]

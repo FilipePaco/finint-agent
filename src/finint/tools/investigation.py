@@ -199,6 +199,8 @@ class ToolContext:
     db_path: Path
     classification: Mapping[str, Mapping[str, str]]
     store: EvidenceStore = field(default_factory=EvidenceStore)
+    # Evaluation only: replace stored memos by txn_id (paired prompt-injection runs, R4.2).
+    memo_overrides: Mapping[int, str] = field(default_factory=dict)
 
     def connect(self) -> duckdb.DuckDBPyConnection:
         return duckdb.connect(str(self.db_path), read_only=True)
@@ -237,6 +239,17 @@ def _rows(
     return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
 
 
+def _apply_overrides(ctx: ToolContext, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not ctx.memo_overrides:
+        return rows
+    return [
+        {**r, "reference": ctx.memo_overrides.get(r["txn_id"], r.get("reference"))}
+        if "reference" in r
+        else r
+        for r in rows
+    ]
+
+
 def _scan_memos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     hits = []
     for row in rows:
@@ -263,7 +276,7 @@ def get_alert(ctx: ToolContext, alert_id: str) -> Evidence:
             raise ToolError(f"unknown alert {alert_id}")
         alert = rows[0]
         ids = list(alert["contributing_txn_ids"])[:10]
-        txns = _rows(con, _ALERT_TXNS_SQL, {"ids": ids})
+        txns = _apply_overrides(ctx, _rows(con, _ALERT_TXNS_SQL, {"ids": ids}))
     view = minimize_row(alert, ctx.levels("alerts")).data
     data = {
         "alert_id": alert_id,
@@ -328,7 +341,9 @@ def get_transactions(
     params = {"k": account_key, "s": s, "e": e}
     with ctx.connect() as con:
         totals = _rows(con, _TOTALS_SQL[direction], params)[0]
-        rows = _rows(con, _ROWS_SQL[direction], {**params, "limit": max(1, min(limit, MAX_ROWS))})
+        rows = _apply_overrides(
+            ctx, _rows(con, _ROWS_SQL[direction], {**params, "limit": max(1, min(limit, MAX_ROWS))})
+        )
     data = {
         "account_key": account_key,
         "window": _span(s, e),

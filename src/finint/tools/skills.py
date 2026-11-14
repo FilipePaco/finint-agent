@@ -37,11 +37,15 @@ def _parse(path: Path) -> Skill:
 
 
 class SkillLibrary:
-    def __init__(self, root: Path) -> None:
-        self._skills = {s.name: s for s in (_parse(p) for p in sorted(root.glob("*/SKILL.md")))}
+    def __init__(self, root: Path | None) -> None:
+        """``root=None`` gives an empty library (the no-skills ablation, R4.3)."""
+        paths = sorted(root.glob("*/SKILL.md")) if root is not None else []
+        self._skills = {s.name: s for s in (_parse(p) for p in paths)}
 
     def index(self) -> str:
         """The only skill text that goes into the system prompt."""
+        if not self._skills:
+            return "(no skills available in this configuration)"
         return "\n".join(f"- {s.name}: {s.description}" for s in self._skills.values())
 
     def names(self) -> list[str]:
