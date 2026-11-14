@@ -17,7 +17,7 @@ inclusion: always
 | GNN | PyTorch + PyTorch Geometric (GraphSAGE, edge classification) | role names PyTorch; deep-learning fundamentals |
 | Calibration / metrics | scikit-learn (isotonic), custom precision@k | |
 | Agents | **LangGraph** (thin): explicit graph, `interrupt` for HITL, SQLite checkpointer | the graph is visible; critical rules stay in plain Python |
-| LLM | **Gemini** via `init_chat_model` (paid tier / Vertex AI: no training on prompts); **open-weight local** via Ollama as the second model | swappable per agent role; quality × cost comparison |
+| LLM | **Gemini** via `init_chat_model`, version-pinned per agent role (Flash-Lite / Flash). PoC runs on the **free tier** with fully synthetic data; production would use a paid tier or Vertex AI (prompts not used for training) | provider-agnostic: an open-weight model (Ollama) is a config change; not run here (laptop disk) |
 | Structured output | Pydantic v2 models for every LLM output | validation, retries, schema-first |
 | Observability | **Langfuse** (LangChain `CallbackHandler`; self-hosted via docker compose or Langfuse Cloud) for traces, latency, token and cost per trace/agent, eval scores. Token counts in-process come from LangChain's built-in `UsageMetadataCallbackHandler`, and USD comes from Langfuse's model pricing (or the `genai-prices` package when Langfuse is off) | use maintained tools instead of hand-rolled trackers; optional by design (constitution VI) |
 | Name screening | `rapidfuzz` + `unidecode` | deterministic, explainable scores |

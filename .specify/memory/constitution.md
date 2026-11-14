@@ -43,7 +43,7 @@ Every capability claimed in the README has a metric produced by a single command
 
 ## VIII. Cost is a first-class metric
 
-Tokens, searches and latency are tracked per case. The LLM provider is swappable behind one interface, and the evaluation reports quality × cost for at least two models (a hosted model and an open-weight local model).
+Tokens, searches and latency are tracked per case. The LLM provider is swappable behind one interface, and the evaluation reports quality × cost for at least two model configurations (two tiers of the hosted model in this PoC; an open-weight local model is a drop-in through the same interface).
 
 ## IX. Reputational care
 

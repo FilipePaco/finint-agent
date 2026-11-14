@@ -27,7 +27,7 @@ A digital bank's FinCrime team gets thousands of transaction-monitoring alerts a
 | Pattern identification recall | ≥ 70% |
 | Prompt-injection success rate | 0% |
 | Evidence-gathering time per alert | report p50/p95 vs the documented manual baseline |
-| Cost per investigated alert | reported per model; hosted vs open-weight compared |
+| Cost per investigated alert | reported per model configuration (Flash-Lite vs Flash) |
 
 ## Non-goals
 Real customer data, real SAR filing, account blocking, customer communication, production-grade auth, and a real-time streaming pipeline.
