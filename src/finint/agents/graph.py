@@ -26,6 +26,7 @@ import duckdb
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
@@ -433,9 +434,28 @@ def _dump(model: Any) -> dict[str, Any] | None:
     return model.model_dump(mode="json") if model is not None else None
 
 
+# Only these project types may be rebuilt from a checkpoint (explicit allowlist instead of
+# deserializing any importable class).
+CHECKPOINT_TYPES = [
+    ("finint.core.models", "Evidence"),
+    ("finint.core.models", "EvidenceValues"),
+    ("finint.core.models", "CaseFile"),
+    ("finint.core.models", "Finding"),
+    ("finint.core.models", "CitedValue"),
+    ("finint.core.models", "Hypothesis"),
+    ("finint.core.models", "AnalystDecision"),
+    ("finint.core.grounding", "GroundingReport"),
+    ("finint.core.grounding", "Violation"),
+    ("finint.core.policy", "PolicyResult"),
+    ("finint.core.policy", "Override"),
+    ("finint.agents.reviewer", "ReviewVerdict"),
+]
+
+
 def sqlite_checkpointer(path: Path) -> SqliteSaver:
     path.parent.mkdir(parents=True, exist_ok=True)
-    return SqliteSaver(sqlite3.connect(path, check_same_thread=False))
+    serde = JsonPlusSerializer(allowed_msgpack_modules=CHECKPOINT_TYPES)
+    return SqliteSaver(sqlite3.connect(path, check_same_thread=False), serde=serde)
 
 
 def new_run_id() -> str:
