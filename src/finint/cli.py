@@ -437,3 +437,34 @@ def report_weekly() -> None:
     out = settings.reports_dir / f"ops_report_{week}.md"
     out.write_text(text, encoding="utf-8")
     typer.echo(f"wrote {out}")
+
+
+@eval_app.command("record")
+def eval_record() -> None:
+    """Record live Gemini responses on the synthetic world for the CI replay (needs a key)."""
+    import tempfile
+    from pathlib import Path
+
+    from finint.agents.llm import make_model
+    from finint.agents.runtime import ROLES, llm_available
+    from finint.data.synthetic import build_world
+    from finint.eval.replay import Cassette
+    from finint.eval.replay_run import CASSETTE, replay_runtime, run_alerts
+
+    settings = get_settings()
+    if not llm_available(settings):
+        typer.echo("Recording needs GOOGLE_API_KEY.", err=True)
+        raise typer.Exit(code=2)
+    with tempfile.TemporaryDirectory() as tmp:
+        world = build_world(Path(tmp) / "data", Path(tmp) / "reports")
+        live = {role: make_model(getattr(settings, role), settings) for role in ROLES}
+        cassette = Cassette(CASSETTE)
+        cassette.entries = {}
+        runs = run_alerts(replay_runtime(world["settings"], cassette, live), world["alerts"])
+        cassette.save()
+    for run in runs:
+        typer.echo(
+            f"{run['alert_id']}: {run['payload'].get('status')} "
+            f"{(run['payload'].get('policy') or {}).get('disposition')}"
+        )
+    typer.echo(f"recorded {len(cassette.entries)} responses -> {CASSETTE}")
