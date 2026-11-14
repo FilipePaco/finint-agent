@@ -153,6 +153,7 @@ def build_ops_report(
     ]
     manual_min = float(cfg["manual_minutes_per_alert"])
     after_min = (float(np.mean(gathering)) / 60) if gathering else None
+    after_median = (float(np.median(gathering)) / 60) if gathering else None
     by_day: dict[str, list[float]] = {}
     for day, cost in costs:
         by_day.setdefault(day, []).append(float(cost))
@@ -204,8 +205,11 @@ def build_ops_report(
         ),
         (
             "Evidence-gathering time per alert: after (agent)",
-            f"{after_min:.1f} min" if after_min is not None else "-",
-            f"observed over {len(gathering)} investigations",
+            f"{after_min:.1f} min mean, {after_median:.1f} min median"
+            if after_min is not None and after_median is not None
+            else "-",
+            f"observed over {len(gathering)} investigations; the mean includes runs that "
+            "waited on rate limits or a sleeping machine",
         ),
         (
             "Agent-analyst disposition agreement",
