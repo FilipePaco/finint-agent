@@ -56,6 +56,9 @@ ml = [
     "pyarrow>=26.0.1",
     "scikit-learn>=1.9.1",
 ]
+ui = [
+    "streamlit>=1.67.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/finint"]

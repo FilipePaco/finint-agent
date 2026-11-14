@@ -1,0 +1,19 @@
+# Analyst console in a container. Data and secrets are mounted, never baked into the image.
+#   docker compose up console        -> http://localhost:8501
+# Tracing (optional): run Langfuse with its official compose
+# (https://langfuse.com/self-hosting/docker-compose) or use Langfuse Cloud, then set
+# LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY / LANGFUSE_HOST in .env.
+services:
+  console:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+    ports:
+      - "127.0.0.1:8501:8501"
+    entrypoint: ["uv", "run", "--no-sync", "streamlit", "run", "src/finint/app/console.py"]
+    command: ["--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]

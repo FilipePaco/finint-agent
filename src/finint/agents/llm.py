@@ -146,3 +146,33 @@ def record_llm_call(
             alert_id=alert_id,
         )
     )
+
+
+class UnavailableChatModel(BaseChatModel):
+    """Stand-in when no provider key is configured (e.g. the hosted demo).
+
+    Any call raises, so the graph degrades exactly as during an outage: the investigator
+    returns a deterministic NEEDS_MORE_INFO evidence pack and the analyst still decides.
+    """
+
+    reason: str = "no LLM provider configured"
+
+    @property
+    def _llm_type(self) -> str:
+        return "unavailable"
+
+    def _generate(
+        self, messages: Any, stop: Any = None, run_manager: Any = None, **kwargs: Any
+    ) -> Any:
+        raise RuntimeError(self.reason)
+
+    def bind_tools(self, tools: Any, **kwargs: Any) -> Any:
+        return self
+
+    def with_structured_output(self, schema: Any, **kwargs: Any) -> Any:
+        from langchain_core.runnables import RunnableLambda
+
+        def fail(_: Any) -> Any:
+            raise RuntimeError(self.reason)
+
+        return RunnableLambda(fail)

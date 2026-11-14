@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 
 from finint.agents.graph import Runtime
-from finint.agents.llm import load_prompt, make_model
+from finint.agents.llm import UnavailableChatModel, load_prompt, make_model
 from finint.agents.observability import run_config
 from finint.config import Settings, load_yaml
 from finint.core.audit import AuditLog
@@ -14,6 +14,12 @@ from finint.tools.media import FixtureProvider, MediaProvider, TavilyProvider
 from finint.tools.skills import SkillLibrary
 
 ROLES = ("investigator", "reviewer", "media")
+
+
+def llm_available(settings: Settings) -> bool:
+    """True if every role's provider has what it needs (only Google is keyed here)."""
+    specs = [getattr(settings, role) for role in ROLES]
+    return all(s.provider != "google_genai" or settings.google_api_key is not None for s in specs)
 
 
 def build_runtime(
@@ -38,7 +44,10 @@ def build_runtime(
         skills=SkillLibrary(settings.config_dir.parent / "skills"),
         screening_config=load_yaml("screening", settings.config_dir),
         media_provider=provider,
-        models={role: make_model(spec, settings) for role, spec in specs.items()},
+        models={
+            role: make_model(spec, settings) if llm_available(settings) else UnavailableChatModel()
+            for role, spec in specs.items()
+        },
         model_ids={role: spec.model for role, spec in specs.items()},
         prompts={role: load_prompt(role) for role in ROLES},
         tool_budget=tool_budget,
