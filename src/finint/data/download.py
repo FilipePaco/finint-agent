@@ -22,6 +22,12 @@ def file_url(name: str) -> str:
     return f"{KAGGLE_DOWNLOAD_URL}/{name}"
 
 
+def tls_context() -> ssl.SSLContext:
+    """TLS verified against the OS trust store (works with python.org builds and TLS
+    inspection proxies). Shared by every outbound HTTPS call in the project."""
+    return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+
 def https_open(url: str) -> BinaryIO:
     """Open an HTTPS URL verifying certificates against the OS trust store (``truststore``).
 
@@ -30,7 +36,7 @@ def https_open(url: str) -> BinaryIO:
     """
     if not url.startswith("https://"):
         raise ValueError(f"Refusing non-HTTPS download: {url}")
-    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context = tls_context()
     request = urllib.request.Request(url, headers={"User-Agent": "finint-agent"})  # noqa: S310
     response: BinaryIO = urllib.request.urlopen(request, timeout=60, context=context)  # noqa: S310
     return response
