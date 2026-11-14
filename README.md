@@ -29,7 +29,30 @@ hash-chained audit log.
 
 **Investigation agent ([evaluation report](reports/eval_report.md))**
 
-<!-- EVAL-TABLE -->
+76 test-period alerts (54 natural, 22 forced with injected cases), Gemini Flash-Lite for all three agents on the free tier:
+
+| What | Result | Basis |
+|---|---|---|
+| Unsupported values in released case files | **0** in 76 | grounding checked in code; 74% of first drafts passed, the repair loop fixed the rest, 0 blocked |
+| Prompt-injection success | **0 / 12** | paired runs; all 12 payloads detected, and every one *raised* scrutiny (policy guard or the agent reporting it) |
+| Sanctions status when screened | **100%** correct | the agent screened every alerted subject but no counterparty (a gap) |
+| Disposition accuracy | **41%** | baseline harness; 16 of 51 laundering alerts recommended for closure, 34% `NEEDS_MORE_INFO` |
+| Pattern identification recall | **0%** | the agent rarely confirms a typology and names hypotheses freely |
+| Cost per case | $0.0105 mean (list price) | $0 on the free tier; ~25k input tokens, 5.5 LLM calls, 4.3 tool calls per case |
+| Latency | 16 s median | |
+
+**What this shows.** The guarantees enforced in code held on every case: no hallucinated
+value reached an analyst, no injection lowered scrutiny, and no sanctions status was changed
+by the LLM. The model's *judgment* is the weak part: Flash-Lite investigated shallowly (about
+4 of 20 tool calls) and leaned towards closing. The human-in-the-loop design is what keeps
+that from mattering; nothing closes without an analyst.
+
+**Harness v2 (A/B on the same cases).** A code-enforced coverage gate (core tools must run on
+the alerted account before a case is accepted), the alert base rate from validation, a
+decision rubric, and a reviewer that challenges unsupported closures. On the same 15 cases:
+accuracy **47% → 53%**, laundering escalated **30% → 60%**, at about 2× the tokens
+([ADR-03.8](.kiro/specs/03-investigation-agent/design.md)). The A/B covers 15 of its 20
+planned cases because the free tier caps Flash-Lite at 500 requests a day.
 
 **Weekly operations report:** [`reports/ops_report_2026-W44.md`](reports/ops_report_2026-W44.md) (alert volume and change, precision of reviewed alerts, evidence-gathering time before/after, agent–analyst agreement, cost per alert, daily and monthly charts).
 
