@@ -37,6 +37,7 @@ class Evidence(BaseModel):
     data: Any  # raw output (what the validator and the analyst see)
     values: EvidenceValues
     untrusted: bool = False  # contains attacker-controllable text (memos, names, news)
+    injection_hits: list[dict[str, Any]] = Field(default_factory=list)  # from core.injection
 
 
 class CitedValue(BaseModel):
