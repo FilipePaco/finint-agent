@@ -60,7 +60,7 @@ class SubmitFindings(BaseModel):
 
 
 def tool_spec(name: str, model: type[BaseModel]) -> dict[str, Any]:
-    spec = convert_to_openai_tool(model)
+    spec: dict[str, Any] = convert_to_openai_tool(model)
     spec["function"]["name"] = name
     return spec
 
