@@ -8,7 +8,7 @@ help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 
 install: ## Create the venv with dev tools
-	$(UV) sync --group dev --group data --group ml
+	$(UV) sync --group dev --group data --group ml --group agent
 
 lint: ## Ruff lint + format check
 	$(UV) run ruff check .

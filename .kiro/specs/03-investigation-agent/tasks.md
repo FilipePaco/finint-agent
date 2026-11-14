@@ -18,13 +18,13 @@ Tools & skills
 - [x] 3.11 MediaProvider: FixtureProvider + TavilyProvider + permission gate (**contract adapted from `pig_finserv` `EvidenceSource`**) · _R3.3_
 
 Agents & graph
-- [ ] 3.12 LLM factory per role via `init_chat_model` (**port from HealthCareAI `llm.py`**), provider-agnostic, prompt versioning · _R3.13_
-- [ ] 3.13 `observability.py`: Langfuse `CallbackHandler` (trace_id = run_id) or `[]`; usage via LangChain `UsageMetadataCallbackHandler`; USD via Langfuse pricing / `genai-prices` · _R3.12, R3.14_
-- [ ] 3.14 Media agent subgraph + verbatim-quote verification (**loop pattern from HealthCareAI `news_agent.py`**) · _R3.3_
-- [ ] 3.15 Investigator agent (tools, skills index, budget, hypotheses, LLM-unavailable fallback) · _R3.1, R3.2_
-- [ ] 3.16 Reviewer agent + revise loop · _R3.6_
-- [ ] 3.17 Graph wiring: grounding retries, policy guard, interrupt, finalize, SQLite checkpointer · _R3.5–R3.8_
-- [ ] 3.18 CLI: `finint investigate <alert_id>` (prints case + audit trail)
+- [x] 3.12 LLM factory per role via `init_chat_model` (**port from HealthCareAI `llm.py`**), provider-agnostic, prompt versioning · _R3.13_
+- [x] 3.13 `observability.py`: Langfuse `CallbackHandler` (trace_id = run_id) or `[]`; usage via LangChain `UsageMetadataCallbackHandler`; USD via Langfuse pricing / `genai-prices` · _R3.12, R3.14_
+- [x] 3.14 Media agent subgraph + verbatim-quote verification (**loop pattern from HealthCareAI `news_agent.py`**) · _R3.3_
+- [x] 3.15 Investigator agent (tools, skills index, budget, hypotheses, LLM-unavailable fallback) · _R3.1, R3.2_
+- [x] 3.16 Reviewer agent + revise loop · _R3.6_
+- [x] 3.17 Graph wiring: grounding retries, policy guard, interrupt, finalize, SQLite checkpointer · _R3.5–R3.8_
+- [x] 3.18 CLI: `finint investigate <alert_id>` (prints case + audit trail)
 
 Console & docs
 - [ ] 3.19 Streamlit analyst console with role check, approve/edit/reject + diff audit · _R3.8, R3.11_
