@@ -103,7 +103,12 @@ def build_eval_report(
         "decides every case from the ground truth after the agent, so the audit trail holds "
         "realistic decisions.",
         "## Headline (config `main`)",
-        "Gemini Flash-Lite as investigator and media agent, Gemini Flash as reviewer.",
+        "Models: "
+        + ", ".join(
+            f"{role} `{model}`"
+            for role, model in sorted((results["main"][0].get("models") or {}).items())
+        )
+        + ".",
         _table(
             ["Metric", "Value", "How it is measured"],
             [

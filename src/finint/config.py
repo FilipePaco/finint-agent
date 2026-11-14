@@ -52,13 +52,18 @@ class Settings(BaseSettings):
     fixtures_dir: Path = PROJECT_ROOT / "data" / "fixtures"
     injections_dir: Path = PROJECT_ROOT / "data" / "injections"
 
+    # Hosted demo: synthetic world + replayed Gemini responses, no key needed
+    demo: bool = False
+
     # Reproducibility and time
     seed: int = 42
     as_of_date: date = date(2026, 11, 13)
 
     # LLM per agent role
     investigator: ModelRole = ModelRole()
-    reviewer: ModelRole = ModelRole(model="gemini-3.5-flash")
+    # Flash-Lite everywhere in the PoC: the Gemini free tier allows only 20 Flash requests per
+    # day. Set FININT_REVIEWER__MODEL=gemini-3.5-flash to use the stronger reviewer.
+    reviewer: ModelRole = ModelRole()
     media: ModelRole = ModelRole()
 
     # Provider secrets (standard names, no prefix)

@@ -50,12 +50,14 @@ TYPOLOGY_ALIASES = {
 class EvalConfig:
     name: str
     investigator_model: str | None = None  # None = settings default
+    reviewer_model: str | None = None
     use_skills: bool = True
     use_reviewer: bool = True
 
 
 CONFIGS = {
     "main": EvalConfig("main"),
+    "flash-reviewer": EvalConfig("flash-reviewer", reviewer_model="gemini-3.5-flash"),
     "flash-investigator": EvalConfig("flash-investigator", investigator_model="gemini-3.5-flash"),
     "no-skills": EvalConfig("no-skills", use_skills=False),
     "no-reviewer": EvalConfig("no-reviewer", use_reviewer=False),
@@ -67,18 +69,17 @@ def normalize_typology(name: str) -> str:
     return TYPOLOGY_ALIASES.get(key, key)
 
 
-def configure(
-    base: Runtime, cfg: EvalConfig, make_investigator: Callable[[str], Any] | None
-) -> Runtime:
+def configure(base: Runtime, cfg: EvalConfig, make_model: Callable[[str], Any] | None) -> Runtime:
     rt = replace(base, use_reviewer=cfg.use_reviewer, memo_overrides=None)
     if not cfg.use_skills:
         rt = replace(rt, skills=SkillLibrary(None))
-    if cfg.investigator_model and make_investigator is not None:
-        rt = replace(
-            rt,
-            models={**rt.models, "investigator": make_investigator(cfg.investigator_model)},
-            model_ids={**rt.model_ids, "investigator": cfg.investigator_model},
-        )
+    for role, model in (("investigator", cfg.investigator_model), ("reviewer", cfg.reviewer_model)):
+        if model and make_model is not None:
+            rt = replace(
+                rt,
+                models={**rt.models, role: make_model(model)},
+                model_ids={**rt.model_ids, role: model},
+            )
     return rt
 
 
