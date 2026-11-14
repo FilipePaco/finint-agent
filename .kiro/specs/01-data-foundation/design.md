@@ -34,7 +34,7 @@ Everything is idempotent: `make data` rebuilds from raw files and the injection 
 
 ### ADR-01.1 DuckDB (vs PostgreSQL / pandas-only)
 **Decision:** DuckDB file as the analytical store.
-**Alternatives:** Postgres (used in HealthCareAI) needs a server, and analytical window functions over 5M rows are slower on a laptop. Pandas-only means no SQL tools and memory pressure on graph windows.
+**Alternatives:** Postgres needs a server, and analytical window functions over 5M rows are slower on a laptop. Pandas-only means no SQL tools and memory pressure on graph windows.
 **Why:** columnar SQL with window functions, zero ops, embeddable in the demo. The audit trail goes to a separate SQLite file so analytical rebuilds never touch compliance records.
 
 ### ADR-01.2 Hand-curated injection cases (vs random perturbation)

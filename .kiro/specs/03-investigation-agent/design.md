@@ -83,13 +83,13 @@ Normalize (unidecode, casefold, strip punctuation and honorifics) → candidate 
 `get_model(role) -> BaseChatModel` uses `init_chat_model` with provider, model id and temperature per role (`investigator`, `reviewer`, `media`) from settings. The prompt version is the hash of the prompt file.
 
 ## Tool-calling pattern
-Tools are LangChain tools with `response_format="content_and_artifact"`. The **model** receives a compact text summary (token-bounded). The **code** receives the full `Evidence` object, which goes into the evidence store. The grounding validator therefore checks against raw tool outputs, not against what the model was shown. Ported from HealthCareAI's news agent, together with the max-iterations guard and deterministic fallback.
+Tools are LangChain tools with `response_format="content_and_artifact"`. The **model** receives a compact text summary (token-bounded). The **code** receives the full `Evidence` object, which goes into the evidence store. The grounding validator therefore checks against raw tool outputs, not against what the model was shown. Adapted from an earlier project, together with the max-iterations guard and deterministic fallback.
 
 ## Audit vs observability (two layers)
 | | Audit trail (`core/audit.py`) | Observability (`observability.py`) |
 |---|---|---|
 | Purpose | compliance system of record | debugging, latency, cost dashboards |
-| Built by | us (ported from `pig_finserv`) | **Langfuse** (existing tool) |
+| Built by | us | **Langfuse** (existing tool) |
 | Storage | SQLite, append-only, hash-chained | Langfuse (self-hosted compose profile or Cloud) |
 | Required | yes | no, degrades to no-op |
 | Link | `run_id` | `trace_id = run_id` |
@@ -109,7 +109,7 @@ LangGraph `SqliteSaver` keyed by `run_id`, so a paused case survives an app rest
 ### ADR-03.1 Three LLM agents with deterministic guards (vs a single ReAct agent / vs fully deterministic pipeline)
 **Decision:** investigator, media analyst and reviewer are LLM agents. Grounding, screening, policy and HITL are code or human.
 **Alternatives:** (a) one ReAct agent with all tools is simpler, but untrusted news text would share a context with transaction tools, and nothing independently critiques the draft. (b) A fixed pipeline with an LLM only writing prose has no agency, and the evidence gathered never adapts to the case.
-**Why:** agency goes where the work is judgment (what to look at, what news really says, whether a draft holds). Code owns everything with compliance weight. This continues the earlier HealthCareAI decision to restrict agency to one node, now widened where the task needs judgment.
+**Why:** agency goes where the work is judgment (what to look at, what news really says, whether a draft holds). Code owns everything with compliance weight. An earlier project restricted agency to a single node; here it is widened only where the task needs judgment.
 
 ### ADR-03.2 LangGraph (vs plain Python loop / CrewAI / Claude Agent SDK)
 **Decision:** LangGraph with a thin graph.
@@ -129,7 +129,7 @@ LangGraph `SqliteSaver` keyed by `run_id`, so a paused case survives an app rest
 
 ### ADR-03.6 Langfuse for observability (vs custom tracker / LangSmith / OpenTelemetry only)
 **Decision:** Langfuse via its LangChain callback. Tokens come from LangChain's usage callback, USD from Langfuse pricing / `genai-prices`.
-**Alternatives:** a custom tracker (as in HealthCareAI) means maintenance with no added value. LangSmith works, but it is SaaS-first. Raw OpenTelemetry would need a backend and LLM-specific UI.
+**Alternatives:** a custom tracker means maintenance with no added value. LangSmith works, but it is SaaS-first. Raw OpenTelemetry would need a backend and LLM-specific UI.
 **Why:** open source and **self-hostable**, so traces holding case context can stay in-house (data minimization), and the eval scores can be pushed alongside traces. Optional by design.
 
 ### ADR-03.7 Streamlit console (vs FastAPI + frontend)

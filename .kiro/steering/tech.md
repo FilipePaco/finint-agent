@@ -48,12 +48,8 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF", "PT"]
 - Modules in `core/` must not import LangChain/LangGraph (constitution X).
 - If the LLM is unavailable, the graph degrades to a deterministic evidence pack with disposition `NEEDS_MORE_INFO`. It never crashes the analyst's queue.
 
-## Reused from previous projects
-| From | What |
-|---|---|
-| `HealthCareAI` | ADR format in design docs; pydantic-settings config; `init_chat_model` factory; tool-calling loop with `response_format="content_and_artifact"` + max iterations + deterministic fallback; two-layer audit/observability idea with Langfuse; `TEST_PLAN` (test ↔ requirement, one rejection test per guardrail); `docs/audit.md` for reviewers; Railway deploy notes |
-| `pig_finserv` | `pyproject.toml` layout (hatchling, uv, dependency groups, Typer entry point); hash-chained `audit.py` with `AuditIntegrityError`; `modeling/` split, calibration, versioned artifact, model card; Dockerfile with `uv sync --locked`; `.gitignore`/`.env.example` |
-| `CantadasProject` | GitHub Actions security workflow (SAST + pip-audit) |
+## Reused from earlier personal projects
+The ADR format, pydantic-settings config, LLM factory, tool-calling loop with a deterministic fallback, the hash-chained audit log, the model card, the Docker setup and the security CI workflow were adapted from earlier personal projects, so tasks marked *adapted* started from proven code.
 
 ## Commands
 `make data` · `make train` · `make alerts` · `make eval` · `make eval-record` · `make report` · `make app` · `make docs` · `make test` · `make lint` · `make audit-verify`

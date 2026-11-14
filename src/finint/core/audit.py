@@ -5,7 +5,7 @@ Each event stores the SHA-256 of its canonical content plus the previous event's
 editing or deleting any stored event breaks :meth:`AuditLog.verify`. Lives in its own
 SQLite file, apart from the analytical DuckDB store (ADR-01.1).
 
-Ported from the pig_finserv project and generalized to typed agent events.
+Adapted from an earlier personal project and generalized to typed agent events.
 """
 
 from __future__ import annotations

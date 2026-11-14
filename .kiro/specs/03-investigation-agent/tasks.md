@@ -4,7 +4,7 @@ Write the tests in `test-strategy.md` before or alongside each core module.
 
 Core (framework-free, test first)
 - [x] 3.1 `core/models.py`: Alert, Evidence, CaseFile, Disposition, AuditEvent, AnalystDecision · _R3.5, R3.8_
-- [x] 3.2 `core/audit.py`: hash-chained append-only log + `AuditIntegrityError` + `make audit-verify` (**port from `pig_finserv/audit.py`**, swap triage fields for agent events) · _R3.12_
+- [x] 3.2 `core/audit.py`: hash-chained append-only log + `AuditIntegrityError` + `make audit-verify` (**adapted from an earlier personal project**, generalized to agent events) · _R3.12_
 - [x] 3.3 `core/minimize.py` + test that label columns never reach a prompt · _R3.9_
 - [x] 3.4 `core/screening.py` + tests on `sanctions_cases.yaml` · _R3.4_
 - [x] 3.5 `core/grounding.py` + property tests · _R3.5_
@@ -15,12 +15,12 @@ Tools & skills
 - [x] 3.8 Read-only SQL tools (parameterized, ruff `S` clean) with `content_and_artifact` + evidence registration · _R3.1_
 - [x] 3.9 `detect_patterns` (code typology detectors reused from graph features) · _R3.1_
 - [x] 3.10 Skills: 7 typologies + sanctions-review + case-writing · _R3.2_
-- [x] 3.11 MediaProvider: FixtureProvider + TavilyProvider + permission gate (**contract adapted from `pig_finserv` `EvidenceSource`**) · _R3.3_
+- [x] 3.11 MediaProvider: FixtureProvider + TavilyProvider + permission gate (**adapted from an earlier personal project**) · _R3.3_
 
 Agents & graph
-- [x] 3.12 LLM factory per role via `init_chat_model` (**port from HealthCareAI `llm.py`**), provider-agnostic, prompt versioning · _R3.13_
+- [x] 3.12 LLM factory per role via `init_chat_model` (**adapted from an earlier personal project**), provider-agnostic, prompt versioning · _R3.13_
 - [x] 3.13 `observability.py`: Langfuse `CallbackHandler` (trace_id = run_id) or `[]`; usage via LangChain `UsageMetadataCallbackHandler`; USD via Langfuse pricing / `genai-prices` · _R3.12, R3.14_
-- [x] 3.14 Media agent subgraph + verbatim-quote verification (**loop pattern from HealthCareAI `news_agent.py`**) · _R3.3_
+- [x] 3.14 Media agent subgraph + verbatim-quote verification (**adapted from an earlier personal project**) · _R3.3_
 - [x] 3.15 Investigator agent (tools, skills index, budget, hypotheses, LLM-unavailable fallback) · _R3.1, R3.2_
 - [x] 3.16 Reviewer agent + revise loop · _R3.6_
 - [x] 3.17 Graph wiring: grounding retries, policy guard, interrupt, finalize, SQLite checkpointer · _R3.5–R3.8_
@@ -29,4 +29,4 @@ Agents & graph
 Console & docs
 - [x] 3.19 Streamlit analyst console with role check, approve/edit/reject + diff audit · _R3.8, R3.11_
 - [x] 3.20 `compose.yaml` runs the console; Langfuse via its official compose or Cloud (v3 self-host needs Postgres, ClickHouse, Redis, MinIO; not duplicated here) · _R3.14_
-- [x] 3.21 `docs/audit.md`: how to read the audit trail, verify the chain, and open the matching Langfuse trace (**pattern from HealthCareAI `docs/auditoria.md`**) · _R3.12_
+- [x] 3.21 `docs/audit.md`: how to read the audit trail, verify the chain, and open the matching Langfuse trace (**adapted from an earlier personal project**) · _R3.12_
