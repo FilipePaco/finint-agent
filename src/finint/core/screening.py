@@ -262,7 +262,7 @@ def _reorder(sdn_name: str) -> str:
     return sdn_name
 
 
-# --- Counterparty selection for harness screening (R3.4 · ADR-03.9) -------------------------
+# --- Counterparty selection for harness screening (R3.4 · ADR-03.10) -------------------------
 
 
 class CounterpartyRule(BaseModel):

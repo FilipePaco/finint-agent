@@ -39,7 +39,7 @@ class EvalConfig:
     reviewer_model: str | None = None
     use_skills: bool = True
     use_reviewer: bool = True
-    # v1 = baseline prompts, no coverage gate, no harness counterparty screening (ADR-03.9)
+    # v1 = baseline prompts, no coverage gate, no harness counterparty screening (ADR-03.10)
     harness: str = "v2"
 
 
@@ -134,7 +134,7 @@ def run_case(
     llm = by_type.get("LLM_CALL", [])
     grounding = by_type.get("GROUNDING_RESULT", [])
     # Agent tool calls only; the harness's counterparty screens are audited as system:* and
-    # reach the metrics through the evidence store (ADR-03.9).
+    # reach the metrics through the evidence store (ADR-03.10).
     tools = [e for e in by_type.get("TOOL_CALL", []) if e.actor.startswith("agent:")]
     errors = [e.payload["error"] for e in llm if e.payload.get("error")]
     screening = {

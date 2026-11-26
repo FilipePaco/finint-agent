@@ -3,7 +3,7 @@
 ## Graph
 ```mermaid
 flowchart TD
-    A[intake<br/><i>code</i>] --> C[counterparty screening<br/><i>code, ADR-03.9</i>]
+    A[intake<br/><i>code</i>] --> C[counterparty screening<br/><i>code, ADR-03.10</i>]
     C --> B{{investigator<br/><b>LLM agent</b>}}
     B -- tool calls --> T[(read-only tools<br/>SQL over DuckDB)]
     B -- load_skill --> S[(skills/*.md)]
@@ -26,7 +26,7 @@ flowchart TD
 | investigator | LLM agent | tool order, skills to load, hypotheses, when to stop | core agency |
 | media analyst | LLM agent | queries, same-entity judgment, claim classification | **containment**: untrusted web text never enters the context of the agent that holds transaction tools (constitution IV, IX) |
 | reviewer | LLM agent | accept vs revise, which evidence is missing | independent critique catches confirmation bias; a different prompt/model |
-| counterparty screening | code | which counterparties are screened (fixed rule), match status | constitution III: never left to the LLM (ADR-03.9) |
+| counterparty screening | code | which counterparties are screened (fixed rule), match status | constitution III: never left to the LLM (ADR-03.10) |
 | grounding | code | pass/fail per value | constitution II |
 | policy guard | code | disposition overrides | constitution III |
 | analyst review | human | final decision | constitution I |

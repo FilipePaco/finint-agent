@@ -58,7 +58,7 @@ def world(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
                 json.dumps([{"feature": "out_sum_1h", "value": 1.0, "contribution": 0.4}]),
             ],
         )
-        # A second alert on a clean payer of an injected TRUE_MATCH counterparty (ADR-03.9).
+        # A second alert on a clean payer of an injected TRUE_MATCH counterparty (ADR-03.10).
         cp_txn, payer, cp_day, cp_account, cp_case = con.execute(
             "SELECT t.txn_id, t.from_key, t.ts::DATE, a.account_key, s.case_id "
             "FROM injected_sanctions s JOIN accounts a USING (entity_id) "
@@ -391,7 +391,7 @@ def _cp_gather(world: dict[str, Any]) -> Any:
 def test_harness_screens_counterparties_without_the_llm(
     world: dict[str, Any], tmp_path: Path
 ) -> None:
-    """R3.4 / ADR-03.9: counterparty screening happens in code even if the LLM never runs."""
+    """R3.4 / ADR-03.10: counterparty screening happens in code even if the LLM never runs."""
     cp = world["cp_alert"]
     rt = _runtime(world, tmp_path, [ConnectionError("provider down")])
     graph = build_graph(rt, sqlite_checkpointer(tmp_path / "ckpt.sqlite"))
@@ -431,7 +431,7 @@ def test_counterparty_match_overrides_an_agent_closure(
 def test_harness_screens_stay_out_of_agent_context(
     world: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R3.9 / ADR-03.9: harness evidence is never shown to an LLM and keeps agent ids stable."""
+    """R3.9 / ADR-03.10: harness evidence is never shown to an LLM and keeps agent ids stable."""
     import finint.agents.graph as graph_module
 
     digests: list[str] = []

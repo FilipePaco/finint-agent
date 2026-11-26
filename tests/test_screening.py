@@ -112,7 +112,7 @@ def test_normalize_strips_diacritics_legal_forms_and_particles() -> None:
 
 
 def test_counterparty_selection_is_ranked_capped_and_explained() -> None:
-    """R3.4 / ADR-03.9: the harness picks counterparties by a code rule, never the LLM."""
+    """R3.4 / ADR-03.10: the harness picks counterparties by a code rule, never the LLM."""
     from finint.core.screening import CounterpartyRule, select_counterparties
 
     day = [("1:B", 50.0), ("1:A", 50.0), ("1:SELF", 999.0), ("1:C", 10.0)]

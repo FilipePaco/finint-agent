@@ -5,7 +5,7 @@ bounded ``summary``; the grounding validator and the analyst see the raw ``data`
 extracted values. The store is the single source of truth for what the agent knows.
 
 Evidence the harness gathers on its own, outside the agents' view (counterparty sanctions
-screening, R3.4, ADR-03.9), uses its own prefix and counter (``cp-001``...), so it never
+screening, R3.4, ADR-03.10), uses its own prefix and counter (``cp-001``...), so it never
 shifts the ids the agent sees and cites.
 """
 

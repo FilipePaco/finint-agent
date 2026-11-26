@@ -3,7 +3,7 @@
     intake → screen_counterparties → investigate ⇄ grounding → review ⇄ investigate → policy
            → analyst → finalize
 
-* **screen_counterparties**: code. Screens the alert's counterparties against OFAC (ADR-03.9).
+* **screen_counterparties**: code. Screens the alert's counterparties against OFAC (ADR-03.10).
 * **investigate**: LLM agent (tools, skills, media sub-agent).
 * **grounding**: code. Up to 2 repair rounds, then ``BLOCKED_UNGROUNDED`` (no recommendation).
 * **review**: LLM agent. Up to 2 revise rounds, then remaining objections go to the analyst.
@@ -104,7 +104,7 @@ class Runtime:
         "screen_sanctions",
     )
     memo_overrides: dict[int, str] | None = None  # evaluation-only counterfactual (R4.2)
-    # Harness screening of the alert's counterparties, in code (R3.4, ADR-03.9).
+    # Harness screening of the alert's counterparties, in code (R3.4, ADR-03.10).
     screen_counterparties: bool = True
 
     def ctx(self, evidence: dict[str, Evidence] | None = None) -> ToolContext:
@@ -179,7 +179,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
         }
 
     def screen_counterparties_node(state: InvestigationState) -> dict[str, Any]:
-        """Harness step, no LLM (R3.4, ADR-03.9): screen the alert's counterparties in code.
+        """Harness step, no LLM (R3.4, ADR-03.10): screen the alert's counterparties in code.
 
         Results go to the evidence store under ``cp-`` ids, each screening is audited, and the
         policy guard reads their statuses. They are not shown to the agents.

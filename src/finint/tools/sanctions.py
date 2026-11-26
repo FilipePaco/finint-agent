@@ -117,7 +117,7 @@ class CounterpartyScreen:
 def screen_counterparties(
     ctx: ToolContext, account_key: str, alert_date: date, config: Mapping[str, Any]
 ) -> list[CounterpartyScreen]:
-    """Harness step (R3.4, ADR-03.9): screen the alerted account's relevant counterparties.
+    """Harness step (R3.4, ADR-03.10): screen the alerted account's relevant counterparties.
 
     The selection is a code rule (:func:`select_counterparties`, caps in
     ``config/screening.yaml``); each screening is the same deterministic matcher the agent's
