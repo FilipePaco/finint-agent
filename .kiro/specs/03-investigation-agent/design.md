@@ -52,7 +52,8 @@ The evidence store indexes every numeric/date/account/name value in each output 
 ```
 CaseFile:
   alert_id, summary (≤ 150 words)
-  hypotheses: [ {typology, status: CONFIRMED|REJECTED|INCONCLUSIVE, evidence_ids} ]
+  hypotheses: [ {typology: fan-in|fan-out|cycle|scatter-gather|stack|bipartite|structuring|other,
+                 status: CONFIRMED|REJECTED|INCONCLUSIVE, evidence_ids} ]   # core/typology.py
   findings:   [ {claim, typology?, evidence_ids, cited_values:[{kind, value}]} ]
   sanctions:  [ evidence_id refs ]           # LLM describes; status from code
   adverse_media: [ evidence_id refs ]
@@ -139,3 +140,7 @@ LangGraph `SqliteSaver` keyed by `run_id`, so a paused case survives an app rest
 ### ADR-03.8 Harness v2: coverage gate and decision rubric (vs relying on the prompt alone)
 **Decision:** the investigator cannot submit until four core tools have run on the alerted account (code-enforced, audited); the prompt adds the alert base rate (from validation) and a rubric (close only when every tested typology is rejected *and* a benign explanation is evidenced); the reviewer challenges unsupported closures.
 **Why:** measured on the baseline evaluation. Flash-Lite used about 4 of its 20 tool calls, confirmed a typology in a third of laundering cases and recommended closing many laundering alerts. The failures were shallow investigations, not reasoning limits, so structure in the harness is cheaper than a larger model (the free tier allows 20 Gemini Flash requests a day). The A/B on the same cases is in `reports/eval_report.md`.
+
+### ADR-03.9 Controlled typology vocabulary for hypotheses (vs free text scored by fuzzy matching)
+**Decision:** `Hypothesis.typology` is a `Literal` of the seven typology skill names plus `other` (`core/typology.py`, framework-free). The enum reaches the LLM through the `submit_case` JSON schema and one line in the v2 prompt. A deterministic `normalize_typology` maps aliases taken from the skill descriptions (round-tripping → cycle, layering/random → stack, smurfing → structuring, gather-scatter → scatter-gather, dispersal → fan-out, aggregation → fan-in) and compound labels that name exactly one typology ("Fan-Out / Dispersal"); labels naming two typologies or none ("Structuring / Layering", "Sanctions Match") become `other`. It runs as a `before` validator, so a non-canonical label is normalised instead of rejecting the whole case file, and the eval metrics apply the same function. Finding typologies stay free text (they also tag injection and sanctions findings and are not scored).
+**Why:** the baseline evaluation reported 0% pattern recall, and the agent wrote labels such as "Sanctions Match", "Structuring / Layering" or "Cycle (round-tripping)". Re-scoring the recorded runs offline showed that naming was not what cost the hits (no confirmed label mapped to an expected typology once normalised): the agent rarely confirmed a typology, and when it did it named a single-account shape (fan-out, stack) where the ground truth is a multi-account one (mostly scatter-gather). A closed vocabulary still makes the hypotheses comparable to the ground truth and keeps sanctions concerns out of typology precision. Guessing between two typologies in a compound label would inflate recall, so it is not done.
