@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from finint.core.typology import TYPOLOGIES, Typology, normalize_typology
+
 Disposition = Literal["CLOSE_FALSE_POSITIVE", "ESCALATE", "NEEDS_MORE_INFO"]
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
 ValueKind = Literal["amount", "date", "account", "entity"]
@@ -53,10 +55,21 @@ class Finding(BaseModel):
 
 
 class Hypothesis(BaseModel):
-    typology: str
+    typology: Typology = Field(
+        description=(
+            f"One of: {', '.join(TYPOLOGIES)}. Use 'other' for anything that is not one of the "
+            "laundering typologies (sanctions concerns go in sanctions_evidence_ids)."
+        )
+    )
     status: Literal["CONFIRMED", "REJECTED", "INCONCLUSIVE"]
     evidence_ids: list[str] = Field(default_factory=list)
     rationale: str = ""
+
+    @field_validator("typology", mode="before")
+    @classmethod
+    def _canonical_typology(cls, value: object) -> object:
+        # Controlled vocabulary (R3.1): legacy or alias labels map to the canonical name.
+        return normalize_typology(value) if isinstance(value, str) else value
 
 
 class CaseFile(BaseModel):

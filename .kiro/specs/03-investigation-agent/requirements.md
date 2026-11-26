@@ -16,6 +16,7 @@ For a selected alert, a multi-agent system gathers evidence with read-only tools
 - THE investigator SHALL have only read-only tools: account profile, transactions in a window, counterparties, multi-hop flow tracing, pattern detection, ML explanation, sanctions screening, skill loading and media-check delegation.
 - THE investigator SHALL respect a budget (max tool calls, max tokens, max wall time from config). IF the budget is exhausted THEN it SHALL submit its best draft with disposition `NEEDS_MORE_INFO` and list what is missing.
 - THE investigator SHALL state hypotheses (typologies suspected) before testing them. Hypotheses and outcomes are recorded in the case file.
+- Each hypothesis typology SHALL come from a controlled vocabulary: the typology skill names (`fan-in`, `fan-out`, `cycle`, `scatter-gather`, `stack`, `bipartite`, `structuring`) or `other`. The vocabulary SHALL be exposed to the LLM in the `submit_case` schema and the prompt, and alias labels (e.g. `Fan-In`, `round-tripping`, `layering`) SHALL be normalised in code.
 - (Harness v2) THE SYSTEM SHALL refuse a submitted case until `detect_patterns`, `get_counterparties`, `trace_flows` and `screen_sanctions` have run on the alerted account, unless the tool budget is exhausted. Each refusal is audited.
 
 ### R3.2 Skills (progressive disclosure)

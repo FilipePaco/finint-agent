@@ -30,3 +30,6 @@ Console & docs
 - [x] 3.19 Streamlit analyst console with role check, approve/edit/reject + diff audit · _R3.8, R3.11_
 - [x] 3.20 `compose.yaml` runs the console; Langfuse via its official compose or Cloud (v3 self-host needs Postgres, ClickHouse, Redis, MinIO; not duplicated here) · _R3.14_
 - [x] 3.21 `docs/audit.md`: how to read the audit trail, verify the chain, and open the matching Langfuse trace (**adapted from an earlier personal project**) · _R3.12_
+
+Evaluation follow-ups
+- [x] 3.22 Controlled typology vocabulary for hypotheses (`core/typology.py`, enum in `submit_case`, prompt line, alias normaliser) · _R3.1, R3.2_ · ADR-03.9
