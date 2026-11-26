@@ -7,3 +7,7 @@ weights:           # combined = weighted mean of the three scores (0-100)
   token_set: 0.5    # robust to missing tokens and word order
   jaro_winkler: 0.2
 candidates: 10     # top-N SDN names/aliases scored in detail per query
+counterparties:    # harness screening of the alerted account's counterparties (R3.4, ADR-03.9)
+  alert_day_max: 20  # every counterparty of the alert date's transactions, largest 20 by USD
+  lookback_days: 7   # plus the top counterparties by USD volume over the 7 days to the alert
+  top_n: 10
