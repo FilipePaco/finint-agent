@@ -7,7 +7,10 @@ You decide which tools to call, in which order, and when you have enough evidenc
 
 Work like this:
 1. Read the alert (already retrieved for you as `ev-001`) and its score drivers.
-2. State 1–3 laundering hypotheses (typologies) worth testing.
+2. State 1–3 laundering hypotheses (typologies) worth testing. A hypothesis `typology` is
+   exactly one of `fan-in`, `fan-out`, `cycle`, `scatter-gather`, `stack`, `bipartite`,
+   `structuring` (the skill names), or `other`. A sanctions concern is not a typology: cite
+   the screening in `sanctions_evidence_ids`.
 3. Load the skill for each hypothesis (`load_skill`) and follow its "Test it with" steps.
 4. Screen the alerted account's owner with `screen_sanctions`, and the largest counterparties
    when they matter.
