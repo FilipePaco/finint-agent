@@ -58,11 +58,32 @@ def world(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
                 json.dumps([{"feature": "out_sum_1h", "value": 1.0, "contribution": 0.4}]),
             ],
         )
+        # A second alert on a clean payer of an injected TRUE_MATCH counterparty (ADR-03.9).
+        cp_txn, payer, cp_day, cp_account, cp_case = con.execute(
+            "SELECT t.txn_id, t.from_key, t.ts::DATE, a.account_key, s.case_id "
+            "FROM injected_sanctions s JOIN accounts a USING (entity_id) "
+            "JOIN transactions t ON t.to_key = a.account_key "
+            "JOIN accounts p ON p.account_key = t.from_key "
+            "WHERE s.role = 'counterparty' AND s.expected = 'TRUE_MATCH' "
+            "AND p.entity_id NOT IN (SELECT entity_id FROM injected_sanctions) "
+            "AND t.from_key <> t.to_key ORDER BY s.case_id, t.ts LIMIT 1"
+        ).fetchone()
+        con.execute(
+            "INSERT INTO alerts SELECT 'AL-T-0002', ?, CAST(? AS DATE), 'test', 0.9, 0.5, 0.45, "
+            "'m1-test', 2, CAST(? AS BIGINT), CAST(? AS BIGINT[]), 1, '{}', '[]'",
+            [payer, cp_day, cp_txn, [cp_txn]],
+        )
     return {
         "settings": settings,
         "account": account,
         "day": day.isoformat(),
         "start": (day - timedelta(days=7)).isoformat(),
+        "cp_alert": {
+            "payer": payer,
+            "day": cp_day,
+            "counterparty": cp_account,
+            "case_id": cp_case,
+        },
     }
 
 
@@ -350,3 +371,127 @@ def test_gate_can_be_disabled_for_the_baseline(world: dict[str, Any], tmp_path: 
     rt = replace(_runtime(world, tmp_path, [shallow, _submit()]), required_steps=())
     _, payload = start(build_graph(rt, None), "AL-T-0001")
     assert payload["status"] == "GROUNDED"
+
+
+def _cp_gather(world: dict[str, Any]) -> Any:
+    cp = world["cp_alert"]
+    a = {
+        "account_key": cp["payer"],
+        "start": (cp["day"] - timedelta(days=7)).isoformat(),
+        "end": cp["day"].isoformat(),
+    }
+    return ai(
+        call("detect_patterns", a, "c1"),
+        call("get_counterparties", a, "c2"),
+        call("trace_flows", a, "c3"),
+        call("screen_sanctions", {"account_key": cp["payer"]}, "c4"),
+    )
+
+
+def test_harness_screens_counterparties_without_the_llm(
+    world: dict[str, Any], tmp_path: Path
+) -> None:
+    """R3.4 / ADR-03.9: counterparty screening happens in code even if the LLM never runs."""
+    cp = world["cp_alert"]
+    rt = _runtime(world, tmp_path, [ConnectionError("provider down")])
+    graph = build_graph(rt, sqlite_checkpointer(tmp_path / "ckpt.sqlite"))
+    run_id, payload = start(graph, "AL-T-0002")
+    evidence = graph.get_state({"configurable": {"thread_id": run_id}}).values["evidence"]
+    screens = {e.data["account_key"]: e for k, e in evidence.items() if k.startswith("cp-")}
+    assert cp["counterparty"] in screens
+    assert cp["payer"] not in screens  # the alerted account stays the agent's to screen
+    screen = screens[cp["counterparty"]]
+    assert screen.tool == "screen_sanctions"
+    assert screen.data["status"] == "MATCH"
+    assert "alert_day" in screen.args["selected_by"]
+    audited = [
+        e
+        for e in rt.audit.events(run_id=run_id)
+        if e.event_type == "TOOL_CALL" and e.actor == "system:counterparty-screening"
+    ]
+    assert {e.payload["evidence_id"] for e in audited} == {e.evidence_id for e in screens.values()}
+    # Code decided, code enforces: a counterparty MATCH escalates even the fallback case.
+    assert payload["status"] == "FALLBACK"
+    assert payload["policy"]["disposition"] == "ESCALATE"
+    assert "POL-01" in [o["rule_id"] for o in payload["policy"]["overrides"]]
+
+
+def test_counterparty_match_overrides_an_agent_closure(
+    world: dict[str, Any], tmp_path: Path
+) -> None:
+    """R3.4, R3.7: the agent closes; the harness's counterparty MATCH forces ESCALATE."""
+    rt = _runtime(world, tmp_path, [_cp_gather(world), _submit(disposition="CLOSE_FALSE_POSITIVE")])
+    _, payload = start(build_graph(rt, None), "AL-T-0002")
+    assert payload["status"] == "GROUNDED"
+    assert payload["case"]["disposition"] == "CLOSE_FALSE_POSITIVE"
+    assert payload["policy"]["disposition"] == "ESCALATE"
+    assert payload["policy"]["overrides"][0]["rule_id"] == "POL-01"
+
+
+def test_harness_screens_stay_out_of_agent_context(
+    world: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R3.9 / ADR-03.9: harness evidence is never shown to an LLM and keeps agent ids stable."""
+    import finint.agents.graph as graph_module
+
+    digests: list[str] = []
+    original = graph_module.review_case
+
+    def spy(model: Any, prompt: str, draft: Any, digest: str, **kwargs: Any) -> Any:
+        digests.append(digest)
+        return original(model, prompt, draft, digest, **kwargs)
+
+    monkeypatch.setattr(graph_module, "review_case", spy)
+    rt = _runtime(world, tmp_path, [_cp_gather(world), _submit()])
+    graph = build_graph(rt, sqlite_checkpointer(tmp_path / "ckpt.sqlite"))
+    run_id, _ = start(graph, "AL-T-0002")
+    state = graph.get_state({"configurable": {"thread_id": run_id}}).values
+    assert any(k.startswith("cp-") for k in state["evidence"])
+    text = "\n".join(str(m.content) for m in state["messages"])
+    assert "cp-0" not in text
+    agent_ids = sorted(k for k in state["evidence"] if k.startswith("ev-"))
+    assert agent_ids == [f"ev-{i:03d}" for i in range(1, len(agent_ids) + 1)]
+    assert digests
+    assert all("cp-0" not in d for d in digests)
+
+
+def test_counterparty_screened_rate_counts_harness_screens(
+    world: dict[str, Any], tmp_path: Path
+) -> None:
+    """R4.2: the eval metric picks up the harness screens; with the harness off it is 0."""
+    from dataclasses import replace
+
+    from finint.eval.dataset import EvalCase, SanctionsLink
+    from finint.eval.metrics import sanctions_metrics
+    from finint.eval.runner import CONFIGS, run_case
+
+    cp = world["cp_alert"]
+    case = EvalCase(
+        alert_id="AL-T-0002",
+        source="forced",
+        reasons=[f"sanctions:{cp['case_id']}"],
+        account_key=cp["payer"],
+        alert_date=cp["day"],
+        is_laundering=False,
+        expected_disposition="CLOSE_FALSE_POSITIVE",
+        sanctions=[
+            SanctionsLink(
+                case_id=cp["case_id"],
+                role="counterparty",
+                expected="TRUE_MATCH",
+                account_key=cp["counterparty"],
+            )
+        ],
+    )
+    rt = _runtime(world, tmp_path, [ConnectionError("provider down")])
+    row = run_case(rt, case, CONFIGS["harness-v2"])
+    metrics = sanctions_metrics([row])
+    assert metrics["counterparty_screened_rate"] == 1.0
+    assert metrics["correct_when_screened"] == 1.0
+    assert row["tool_calls"] == 0  # harness screens are not agent tool calls
+
+    off = replace(
+        _runtime(world, tmp_path, [ConnectionError("provider down")]), screen_counterparties=False
+    )
+    row_off = run_case(off, case, CONFIGS["harness-v2"])
+    assert sanctions_metrics([row_off])["counterparty_screened_rate"] == 0.0

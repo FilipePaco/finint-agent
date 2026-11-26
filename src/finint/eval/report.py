@@ -221,7 +221,7 @@ def build_eval_report(
             ],
         ),
         "## Sanctions and adverse media inside investigations",
-        f"Linked sanctions parties screened by the agent: {_pct(s['screened_rate'])} "
+        f"Linked sanctions parties screened (agent or harness): {_pct(s['screened_rate'])} "
         f"(subjects {_pct(s['subject_screened_rate'])}, "
         f"counterparties {_pct(s['counterparty_screened_rate'])}); "
         f"status correct when screened: {_pct(s['correct_when_screened'])}. "

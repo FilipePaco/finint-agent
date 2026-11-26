@@ -39,7 +39,8 @@ class EvalConfig:
     reviewer_model: str | None = None
     use_skills: bool = True
     use_reviewer: bool = True
-    harness: str = "v2"  # v1 = baseline prompts and no coverage gate
+    # v1 = baseline prompts, no coverage gate, no harness counterparty screening (ADR-03.9)
+    harness: str = "v2"
 
 
 CONFIGS = {
@@ -62,7 +63,7 @@ def configure(base: Runtime, cfg: EvalConfig, make_model: Callable[[str], Any] |
             "investigator": load_prompt("investigator-v1"),
             "reviewer": load_prompt("reviewer-v1"),
         }
-        rt = replace(rt, prompts=prompts, required_steps=())
+        rt = replace(rt, prompts=prompts, required_steps=(), screen_counterparties=False)
     if not cfg.use_skills:
         rt = replace(rt, skills=SkillLibrary(None))
     for role, model in (("investigator", cfg.investigator_model), ("reviewer", cfg.reviewer_model)):
@@ -132,7 +133,9 @@ def run_case(
         by_type.setdefault(e.event_type, []).append(e)
     llm = by_type.get("LLM_CALL", [])
     grounding = by_type.get("GROUNDING_RESULT", [])
-    tools = by_type.get("TOOL_CALL", [])
+    # Agent tool calls only; the harness's counterparty screens are audited as system:* and
+    # reach the metrics through the evidence store (ADR-03.9).
+    tools = [e for e in by_type.get("TOOL_CALL", []) if e.actor.startswith("agent:")]
     errors = [e.payload["error"] for e in llm if e.payload.get("error")]
     screening = {
         e.data["account_key"]: {
