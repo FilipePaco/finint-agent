@@ -12,3 +12,4 @@
 - [x] 4.9 `docs/architecture.mmd` → `docs/architecture.pdf` · _R4.6_
 - [x] 4.10 README with results and limitations · _R4.6_
 - [x] 4.11 (Bonus) Demo sample export + Streamlit Cloud deploy · _R4.6_
+- [x] 4.12 Pattern metrics normalise recorded typology labels and ignore `other`; offline re-score of `eval/results/*.jsonl` · _R4.2_

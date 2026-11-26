@@ -7,6 +7,8 @@ from typing import Any
 
 import numpy as np
 
+from finint.core.typology import OTHER, Typology, normalize_typology
+
 DISPOSITIONS = ("ESCALATE", "NEEDS_MORE_INFO", "CLOSE_FALSE_POSITIVE")
 
 
@@ -60,24 +62,32 @@ def faithfulness_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _typologies(labels: list[str]) -> set[Typology]:
+    """Canonical typologies in recorded labels (R4.2): legacy free-text labels are normalised
+    and ``other`` is dropped, so existing results can be re-scored without new LLM calls."""
+    return {normalize_typology(t) for t in labels} - {OTHER}
+
+
 def pattern_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    scored = [r for r in rows if r["is_laundering"] and r["expected_typologies"]]
-    hits = sum(len(set(r["expected_typologies"]) & set(r["confirmed_typologies"])) for r in scored)
-    expected = sum(len(r["expected_typologies"]) for r in scored)
-    confirmed = sum(len(r["confirmed_typologies"]) for r in scored)
+    scored = [
+        (_typologies(r["expected_typologies"]), _typologies(r["confirmed_typologies"]))
+        for r in rows
+        if r["is_laundering"] and r["expected_typologies"]
+    ]
+    hits = sum(len(exp & conf) for exp, conf in scored)
+    expected = sum(len(exp) for exp, _ in scored)
+    confirmed = sum(len(conf) for _, conf in scored)
     per: Counter[str] = Counter()
     found: Counter[str] = Counter()
-    for r in scored:
-        for t in r["expected_typologies"]:
+    for exp, conf in scored:
+        for t in exp:
             per[t] += 1
-            found[t] += t in r["confirmed_typologies"]
+            found[t] += t in conf
     return {
         "cases": len(scored),
         "recall": hits / expected if expected else None,
         "precision": hits / confirmed if confirmed else None,
-        "any_typology_found": _rate(
-            [bool(set(r["expected_typologies"]) & set(r["confirmed_typologies"])) for r in scored]
-        ),
+        "any_typology_found": _rate([bool(exp & conf) for exp, conf in scored]),
         "by_typology": {t: {"n": per[t], "recall": found[t] / per[t]} for t in sorted(per)},
     }
 

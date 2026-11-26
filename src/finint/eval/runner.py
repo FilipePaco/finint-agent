@@ -24,26 +24,12 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from finint.agents.graph import CHECKPOINT_TYPES, Runtime, build_graph, resume, start
 from finint.core.models import AnalystDecision
-from finint.eval.dataset import TYPOLOGY_TO_SKILL, EvalCase
+from finint.core.typology import normalize_typology
+from finint.eval.dataset import EvalCase
 from finint.tools.skills import SkillLibrary
 
 SIM_ANALYST = "sim-analyst"
 RATE_LIMIT = re.compile(r"429|RESOURCE_EXHAUSTED|quota|rate limit", re.IGNORECASE)
-TYPOLOGY_ALIASES = {
-    **{k.lower(): v for k, v in TYPOLOGY_TO_SKILL.items()},
-    "gather-scatter": "scatter-gather",
-    "scatter-gather": "scatter-gather",
-    "layering": "stack",
-    "stacking": "stack",
-    "random": "stack",
-    "stack": "stack",
-    "fan-in": "fan-in",
-    "fan-out": "fan-out",
-    "cycle": "cycle",
-    "round-tripping": "cycle",
-    "bipartite": "bipartite",
-    "structuring": "structuring",
-}
 
 
 @dataclass(frozen=True)
@@ -64,11 +50,6 @@ CONFIGS = {
     "no-skills": EvalConfig("no-skills", use_skills=False),
     "no-reviewer": EvalConfig("no-reviewer", use_reviewer=False),
 }
-
-
-def normalize_typology(name: str) -> str:
-    key = name.strip().lower().replace("_", "-").replace(" ", "-")
-    return TYPOLOGY_ALIASES.get(key, key)
 
 
 def configure(base: Runtime, cfg: EvalConfig, make_model: Callable[[str], Any] | None) -> Runtime:

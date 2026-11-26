@@ -6,8 +6,9 @@ from typing import Any
 
 import pytest
 
+from finint.core.typology import normalize_typology
 from finint.eval.metrics import summarize
-from finint.eval.runner import _payload_echoed, normalize_typology
+from finint.eval.runner import _payload_echoed
 
 
 def _row(**kw: Any) -> dict[str, Any]:
