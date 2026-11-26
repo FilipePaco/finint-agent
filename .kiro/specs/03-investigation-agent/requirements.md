@@ -34,6 +34,7 @@ For a selected alert, a multi-agent system gathers evidence with read-only tools
 ### R3.4 Sanctions screening (deterministic)
 - THE `screen_sanctions` tool SHALL return, for each candidate: SDN entry, matched name/alias, algorithm scores, combined score, matched and mismatched fields (name, country, DOB if any), and a code-decided `match_status` (`MATCH`, `POTENTIAL_MATCH`, `NO_MATCH`) from config thresholds.
 - THE LLM SHALL NOT be able to override `match_status`. It may only describe it.
+- (Harness) WHEN an alert is opened THE SYSTEM SHALL, in code and before the investigator runs, screen the owners of the alerted account's counterparties selected by a deterministic rule (every counterparty of the alert date's transactions, plus the top counterparties by USD volume over the lookback window; caps in `config/screening.yaml`). Each result SHALL be registered as evidence, each screening SHALL be audited, and every status SHALL feed the policy guard (R3.7). This SHALL NOT depend on any LLM call, and SHALL use only the local OFAC list (no web search).
 
 ### R3.5 Grounding validator (deterministic)
 - BEFORE a case file reaches the reviewer or the analyst THE SYSTEM SHALL verify that:

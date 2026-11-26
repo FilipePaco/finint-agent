@@ -260,3 +260,46 @@ def _reorder(sdn_name: str) -> str:
         last, _, first = sdn_name.partition(",")
         return f"{first.strip()} {last.strip()}"
     return sdn_name
+
+
+# --- Counterparty selection for harness screening (R3.4 · ADR-03.10) -------------------------
+
+
+class CounterpartyRule(BaseModel):
+    """Which counterparties of an alerted account the harness screens (config/screening.yaml)."""
+
+    alert_day_max: int = 20  # counterparties of the alert date's transactions, by USD volume
+    lookback_days: int = 7  # window ending on the alert date for the volume ranking
+    top_n: int = 10  # top counterparties by USD volume in that window
+
+
+class SelectedCounterparty(BaseModel):
+    account_key: str
+    reasons: list[str]  # "alert_day" and/or "top_volume_window"
+
+
+def select_counterparties(
+    subject: str,
+    alert_day: Sequence[tuple[str, float]],
+    window: Sequence[tuple[str, float]],
+    rule: CounterpartyRule,
+) -> list[SelectedCounterparty]:
+    """Deterministic, explainable choice of the counterparties to screen.
+
+    ``alert_day`` and ``window`` are ``(counterparty account, USD volume)`` pairs. Each list is
+    ranked by volume (ties by account key) and cut to its cap; the union is returned in that
+    order, never including the alerted account itself.
+    """
+
+    def top(rows: Sequence[tuple[str, float]], n: int) -> list[str]:
+        ranked = sorted(
+            ((k, float(v or 0)) for k, v in rows if k != subject), key=lambda r: (-r[1], r[0])
+        )
+        return [k for k, _ in ranked[: max(0, n)]]
+
+    chosen: dict[str, list[str]] = {}
+    for key in top(alert_day, rule.alert_day_max):
+        chosen.setdefault(key, []).append("alert_day")
+    for key in top(window, rule.top_n):
+        chosen.setdefault(key, []).append("top_volume_window")
+    return [SelectedCounterparty(account_key=k, reasons=r) for k, r in chosen.items()]

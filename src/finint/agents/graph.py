@@ -1,7 +1,9 @@
 """The investigation graph (task 3.17 · R3.1-R3.8, R3.12 · ADR-03.1, ADR-03.2).
 
-    intake → investigate ⇄ grounding → review ⇄ investigate → policy → analyst → finalize
+    intake → screen_counterparties → investigate ⇄ grounding → review ⇄ investigate → policy
+           → analyst → finalize
 
+* **screen_counterparties**: code. Screens the alert's counterparties against OFAC (ADR-03.10).
 * **investigate**: LLM agent (tools, skills, media sub-agent).
 * **grounding**: code. Up to 2 repair rounds, then ``BLOCKED_UNGROUNDED`` (no recommendation).
 * **review**: LLM agent. Up to 2 revise rounds, then remaining objections go to the analyst.
@@ -18,6 +20,7 @@ import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 from uuid import uuid4
@@ -42,13 +45,13 @@ from finint.agents.media_agent import run_media_agent
 from finint.agents.reviewer import ReviewVerdict, review_case
 from finint.config import Settings
 from finint.core.audit import AuditLog, EventType, NewEvent
-from finint.core.evidence import EvidenceStore
+from finint.core.evidence import EvidenceStore, agent_visible
 from finint.core.grounding import GroundingReport, validate_grounding
 from finint.core.models import AnalystDecision, CaseFile, Evidence
 from finint.core.policy import PolicyInput, PolicyResult, apply_policy
 from finint.tools.investigation import ToolContext, get_alert
 from finint.tools.media import MediaProvider, SearchNotPermittedError, check_permitted
-from finint.tools.sanctions import PERSON_TYPES, screen_party
+from finint.tools.sanctions import PERSON_TYPES, screen_counterparties, screen_party
 from finint.tools.skills import SkillLibrary
 
 MAX_GROUNDING_ATTEMPTS = 3  # first draft + 2 repairs
@@ -101,6 +104,8 @@ class Runtime:
         "screen_sanctions",
     )
     memo_overrides: dict[int, str] | None = None  # evaluation-only counterfactual (R4.2)
+    # Harness screening of the alert's counterparties, in code (R3.4, ADR-03.10).
+    screen_counterparties: bool = True
 
     def ctx(self, evidence: dict[str, Evidence] | None = None) -> ToolContext:
         return ToolContext(
@@ -173,6 +178,35 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             "skills_loaded": [],
         }
 
+    def screen_counterparties_node(state: InvestigationState) -> dict[str, Any]:
+        """Harness step, no LLM (R3.4, ADR-03.10): screen the alert's counterparties in code.
+
+        Results go to the evidence store under ``cp-`` ids, each screening is audited, and the
+        policy guard reads their statuses. They are not shown to the agents.
+        """
+        if not rt.screen_counterparties:
+            return {}
+        ctx = rt.ctx(state["evidence"])
+        alert = state["evidence"]["ev-001"].data
+        subject = alert["account_key"]
+        alert_date = date.fromisoformat(str(alert["alert_date"])[:10])
+        for screen in screen_counterparties(ctx, subject, alert_date, rt.screening_config):
+            payload: dict[str, Any] = {
+                "tool": "screen_sanctions",
+                "args": {"account_key": screen.selected.account_key},
+                "selected_by": screen.selected.reasons,
+                "counterparty_of": subject,
+            }
+            if screen.evidence is None:
+                payload["error"] = screen.error
+            else:
+                payload |= {
+                    "evidence_id": screen.evidence.evidence_id,
+                    "status": screen.evidence.data["status"],
+                }
+            rt.event(state, "TOOL_CALL", "system:counterparty-screening", payload)
+        return {"evidence": ctx.store.as_dict()}
+
     def investigate(state: InvestigationState) -> dict[str, Any]:
         ctx = rt.ctx(state["evidence"])
         run_id, alert_id = state["run_id"], state["alert_id"]
@@ -217,7 +251,8 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
     def grounding(state: InvestigationState) -> dict[str, Any]:
         draft = state["draft"]
         assert draft is not None  # noqa: S101 - investigate always sets a draft
-        report = validate_grounding(draft, state["evidence"])
+        # Only what the agent saw can ground its case (harness `cp-` items were never shown).
+        report = validate_grounding(draft, agent_visible(state["evidence"]))
         attempts = state.get("grounding_attempts", 0) + 1
         rt.event(
             state,
@@ -262,7 +297,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             rt.models["reviewer"],
             rt.prompts["reviewer"].text,
             draft,
-            evidence_digest(list(state["evidence"].values())),
+            evidence_digest(list(agent_visible(state["evidence"]).values())),
             on_llm_call=rt.recorder("reviewer", state["run_id"], state["alert_id"]),
             config=rt.llm_config(state["run_id"], state["alert_id"]),
         )
@@ -295,6 +330,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
         draft = state["draft"]
         assert draft is not None  # noqa: S101
         evidence = list(state["evidence"].values())
+        # Every screening counts, the harness's counterparty screens included (constitution III).
         statuses = [e.data["status"] for e in evidence if e.tool == "screen_sanctions"]
         categories = [
             f["category"]
@@ -307,7 +343,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             PolicyInput(
                 disposition=draft.disposition,
                 sanctions_statuses=statuses,
-                n_evidence=len(evidence),
+                n_evidence=len(agent_visible(state["evidence"])),  # what the agent gathered
                 injection_attempts=sum(len(e.injection_hits) for e in evidence),
                 adverse_media_categories=categories,
             )
@@ -378,6 +414,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
         return {}
 
     graph.add_node("intake", intake)
+    graph.add_node("screen_counterparties", screen_counterparties_node)
     graph.add_node("investigate", investigate)
     graph.add_node("grounding", grounding)
     graph.add_node("review", review)
@@ -385,7 +422,8 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
     graph.add_node("analyst", analyst)
     graph.add_node("finalize", finalize)
     graph.add_edge(START, "intake")
-    graph.add_edge("intake", "investigate")
+    graph.add_edge("intake", "screen_counterparties")
+    graph.add_edge("screen_counterparties", "investigate")
     graph.add_edge("investigate", "grounding")
     graph.add_conditional_edges(
         "grounding", route_grounding, ["investigate", "review", "policy", "analyst"]

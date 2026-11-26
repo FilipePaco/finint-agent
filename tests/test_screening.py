@@ -109,3 +109,31 @@ def test_normalize_strips_diacritics_legal_forms_and_particles() -> None:
     )
     assert normalize("SUMILAB, S.A. DE C.V.", "company") == "sumilab"
     assert normalize("AL-ASSAD, Bushra", "person") == "assad bushra"
+
+
+def test_counterparty_selection_is_ranked_capped_and_explained() -> None:
+    """R3.4 / ADR-03.10: the harness picks counterparties by a code rule, never the LLM."""
+    from finint.core.screening import CounterpartyRule, select_counterparties
+
+    day = [("1:B", 50.0), ("1:A", 50.0), ("1:SELF", 999.0), ("1:C", 10.0)]
+    window = [("1:Z", 5000.0), ("1:A", 400.0), ("1:Y", 1.0)]
+    rule = CounterpartyRule(alert_day_max=2, lookback_days=7, top_n=2)
+    picked = select_counterparties("1:SELF", day, window, rule)
+    # alert-day first (volume desc, ties by key), then the window's top volume; no self.
+    assert [(p.account_key, p.reasons) for p in picked] == [
+        ("1:A", ["alert_day", "top_volume_window"]),
+        ("1:B", ["alert_day"]),
+        ("1:Z", ["top_volume_window"]),
+    ]
+
+
+def test_counterparty_selection_defaults_match_config() -> None:
+    """R3.4: the caps live in config/screening.yaml and parse into the rule."""
+    from finint.core.screening import CounterpartyRule
+
+    rule = CounterpartyRule.model_validate(
+        load_yaml("screening", ROOT / "config")["counterparties"]
+    )
+    assert rule.alert_day_max >= 1
+    assert rule.top_n >= 1
+    assert CounterpartyRule().model_dump() == rule.model_dump()

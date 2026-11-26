@@ -19,6 +19,9 @@ Convention: every test references a requirement. **Every guardrail has at least 
 | `test_grounding_rejects_unknown_evidence_id` | citing a non-existent evidence id fails | R3.5 |
 | `test_ungrounded_after_retries_is_blocked` | 3rd failure → `BLOCKED_UNGROUNDED`, never shown as recommendation | R3.5 |
 | `test_llm_cannot_override_match_status` | case file claiming NO_MATCH vs a code MATCH → policy forces ESCALATE | R3.4, R3.7 |
+| `test_harness_screens_counterparties_without_the_llm` | counterparties are screened, audited and enforced even when the LLM never runs | R3.4, R3.7 |
+| `test_counterparty_match_overrides_an_agent_closure` | agent closes a case with a counterparty MATCH → policy forces ESCALATE | R3.4, R3.7 |
+| `test_harness_screens_stay_out_of_agent_context` | `cp-` evidence never reaches investigator or reviewer context; agent ids unchanged | R3.9 |
 | `test_policy_blocks_close_on_potential_match` | CLOSE_FALSE_POSITIVE with unresolved POTENTIAL_MATCH is overridden | R3.7 |
 | `test_label_columns_never_in_prompt` | `is_laundering`, `typology`, `attempt_id` never appear in any rendered prompt | R3.9 |
 | `test_media_agent_has_no_transaction_tools` | media agent tool allowlist is exactly search/fetch | R3.3 |

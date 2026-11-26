@@ -3,6 +3,10 @@
 Every tool output is registered here under a sequential id (``ev-001``...). The LLM sees the
 bounded ``summary``; the grounding validator and the analyst see the raw ``data`` and its
 extracted values. The store is the single source of truth for what the agent knows.
+
+Evidence the harness gathers on its own, outside the agents' view (counterparty sanctions
+screening, R3.4, ADR-03.10), uses its own prefix and counter (``cp-001``...), so it never
+shifts the ids the agent sees and cites.
 """
 
 from __future__ import annotations
@@ -15,6 +19,8 @@ from finint.core.grounding import extract_values
 from finint.core.models import Evidence
 
 SUMMARY_MAX_CHARS = 6000
+AGENT_PREFIX = "ev"
+HARNESS_PREFIX = "cp"
 
 
 def render(data: Any, max_chars: int = SUMMARY_MAX_CHARS) -> str:
@@ -38,8 +44,10 @@ class EvidenceStore:
         summary: str | None = None,
         untrusted: bool = False,
         injection_hits: list[dict[str, Any]] | None = None,
+        prefix: str = AGENT_PREFIX,
     ) -> Evidence:
-        evidence_id = f"ev-{len(self._items) + 1:03d}"
+        n = sum(1 for key in self._items if key.startswith(f"{prefix}-"))
+        evidence_id = f"{prefix}-{n + 1:03d}"
         evidence = Evidence(
             evidence_id=evidence_id,
             tool=tool,
@@ -75,3 +83,8 @@ class EvidenceStore:
 
     def injection_attempts(self) -> int:
         return sum(len(e.injection_hits) for e in self._items.values())
+
+
+def agent_visible(items: dict[str, Evidence]) -> dict[str, Evidence]:
+    """The evidence the LLM agents produced or were shown (``ev-`` ids), without harness items."""
+    return {k: v for k, v in items.items() if k.startswith(f"{AGENT_PREFIX}-")}

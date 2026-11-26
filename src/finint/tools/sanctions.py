@@ -7,14 +7,24 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import duckdb
 
+from finint.core.evidence import AGENT_PREFIX, HARNESS_PREFIX
 from finint.core.models import Evidence
-from finint.core.screening import EntityKind, SanctionsScreener, SdnRecord
+from finint.core.screening import (
+    CounterpartyRule,
+    EntityKind,
+    SanctionsScreener,
+    SdnRecord,
+    SelectedCounterparty,
+    select_counterparties,
+)
 from finint.tools.investigation import ToolContext, ToolError
 
 PERSON_TYPES = ("Individual", "Sole Proprietorship")
@@ -43,8 +53,19 @@ def load_screener(db_path: Path, config_items: tuple[tuple[str, Any], ...]) -> S
     return SanctionsScreener(records, thaw(config_items))
 
 
-def screen_party(ctx: ToolContext, account_key: str, config: Mapping[str, Any]) -> Evidence:
-    """Screen the owner of an account against the OFAC SDN list (status decided by code)."""
+def screen_party(
+    ctx: ToolContext,
+    account_key: str,
+    config: Mapping[str, Any],
+    *,
+    prefix: str = AGENT_PREFIX,
+    extra_args: Mapping[str, Any] | None = None,
+) -> Evidence:
+    """Screen the owner of an account against the OFAC SDN list (status decided by code).
+
+    ``prefix`` and ``extra_args`` let the harness register its own screenings (``cp-`` ids,
+    with the reason the counterparty was selected) without shifting the agent's ids.
+    """
     with ctx.connect() as con:
         row = con.execute(
             "SELECT e.entity_id, e.entity_type, e.synthetic_name, e.country, e.date_of_birth "
@@ -68,7 +89,72 @@ def screen_party(ctx: ToolContext, account_key: str, config: Mapping[str, Any]) 
         "status_decided_by": "deterministic screener (thresholds in config/screening.yaml)",
         "candidates": [c.model_dump() for c in result.candidates],
     }
-    return ctx.store.add("screen_sanctions", {"account_key": account_key}, data, untrusted=True)
+    args = {"account_key": account_key, **(extra_args or {})}
+    return ctx.store.add("screen_sanctions", args, data, untrusted=True, prefix=prefix)
+
+
+# Volume per counterparty of an account in [s, e), both directions. Fixed SQL, bound params.
+_COUNTERPARTY_VOLUME_SQL = """
+SELECT counterparty, sum(amount_usd) AS total_usd FROM (
+    SELECT to_key AS counterparty, amount_usd
+    FROM transactions WHERE from_key = $k AND ts >= $s AND ts < $e
+    UNION ALL
+    SELECT from_key, amount_usd
+    FROM transactions WHERE to_key = $k AND ts >= $s AND ts < $e
+)
+WHERE counterparty <> $k
+GROUP BY 1 ORDER BY total_usd DESC, counterparty LIMIT $top
+"""
+
+
+@dataclass(frozen=True)
+class CounterpartyScreen:
+    selected: SelectedCounterparty
+    evidence: Evidence | None
+    error: str | None = None
+
+
+def screen_counterparties(
+    ctx: ToolContext, account_key: str, alert_date: date, config: Mapping[str, Any]
+) -> list[CounterpartyScreen]:
+    """Harness step (R3.4, ADR-03.10): screen the alerted account's relevant counterparties.
+
+    The selection is a code rule (:func:`select_counterparties`, caps in
+    ``config/screening.yaml``); each screening is the same deterministic matcher the agent's
+    ``screen_sanctions`` tool uses, registered under a ``cp-`` evidence id. Local list
+    matching only: nothing leaves the process and no LLM is involved.
+    """
+    rule = CounterpartyRule.model_validate(config.get("counterparties") or {})
+    day = datetime.combine(alert_date, datetime.min.time())
+    end = day + timedelta(days=1)
+    windows = {
+        "alert_day": (day, rule.alert_day_max),
+        "window": (day - timedelta(days=rule.lookback_days), rule.top_n),
+    }
+    volumes: dict[str, list[tuple[str, float]]] = {}
+    with ctx.connect() as con:
+        for name, (start, top) in windows.items():
+            rows = con.execute(
+                _COUNTERPARTY_VOLUME_SQL,
+                {"k": account_key, "s": start, "e": end, "top": max(1, top)},
+            ).fetchall()
+            volumes[name] = [(str(k), float(v or 0)) for k, v in rows]
+    selected = select_counterparties(account_key, volumes["alert_day"], volumes["window"], rule)
+    out = []
+    for party in selected:
+        try:
+            evidence = screen_party(
+                ctx,
+                party.account_key,
+                config,
+                prefix=HARNESS_PREFIX,
+                extra_args={"selected_by": party.reasons},
+            )
+        except ToolError as error:
+            out.append(CounterpartyScreen(party, None, str(error)))
+            continue
+        out.append(CounterpartyScreen(party, evidence))
+    return out
 
 
 def _freeze(value: Any) -> Any:
