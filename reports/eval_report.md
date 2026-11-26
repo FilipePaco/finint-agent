@@ -91,8 +91,8 @@ Each configuration is compared with `main` restricted to exactly the alerts it r
 |---|---|---|---|---|---|---|---|---|
 | main (same 23 cases) | 23 | 52% | 50% | 1 | 61% | 0% | 4.2 | $0.0129 |
 | flash-reviewer | 23 | 43% | 39% | 1 | 43% | 14% | 4.7 | $0.0331 |
-| main (same 15 cases) | 15 | 47% | 30% | 2 | 80% | 0% | 4.7 | $0.0090 |
-| harness-v2 | 15 | 53% | 60% | 3 | 53% | 0% | 5.2 | $0.0188 |
+| main (same 20 cases) | 20 | 45% | 23% | 5 | 70% | 0% | 4.7 | $0.0101 |
+| harness-v2 | 20 | 45% | 46% | 6 | 60% | 0% | 5.3 | $0.0178 |
 
 ## Errors (config `main`)
 

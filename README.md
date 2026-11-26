@@ -49,10 +49,13 @@ that from mattering; nothing closes without an analyst.
 
 **Harness v2 (A/B on the same cases).** A code-enforced coverage gate (core tools must run on
 the alerted account before a case is accepted), the alert base rate from validation, a
-decision rubric, and a reviewer that challenges unsupported closures. On the same 15 cases:
-accuracy **47% → 53%**, laundering escalated **30% → 60%**, at about 2× the tokens
-([ADR-03.8](.kiro/specs/03-investigation-agent/design.md)). The A/B covers 15 of its 20
-planned cases because the free tier caps Flash-Lite at 500 requests a day.
+decision rubric, and a reviewer that challenges unsupported closures. On the same 20 cases:
+laundering escalated **23% → 46%**, overall accuracy flat at **45%** (the stricter harness
+also escalates more legitimate alerts), at about 1.8× the cost per case
+([ADR-03.8](.kiro/specs/03-investigation-agent/design.md)). Doubling recall on laundering at
+equal accuracy is the trade-off a compliance team wants: a false escalation costs analyst
+minutes, a missed case costs a regulatory finding. Full table in
+[`reports/eval_report.md`](reports/eval_report.md).
 
 **Weekly operations report:** [`reports/ops_report_2026-W44.md`](reports/ops_report_2026-W44.md) (alert volume and change, precision of reviewed alerts, evidence-gathering time before/after, agent–analyst agreement, cost per alert, daily and monthly charts).
 
