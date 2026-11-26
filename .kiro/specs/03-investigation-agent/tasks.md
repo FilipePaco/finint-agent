@@ -24,6 +24,7 @@ Agents & graph
 - [x] 3.15 Investigator agent (tools, skills index, budget, hypotheses, LLM-unavailable fallback) · _R3.1, R3.2_
 - [x] 3.16 Reviewer agent + revise loop · _R3.6_
 - [x] 3.17 Graph wiring: grounding retries, policy guard, interrupt, finalize, SQLite checkpointer · _R3.5–R3.8_
+- [x] 3.17b Harness counterparty sanctions screening: code selection rule, `cp-` evidence, audit, policy input, hidden from the LLMs (ADR-03.9) · _R3.4, R3.7, R3.12_
 - [x] 3.18 CLI: `finint investigate <alert_id>` (prints case + audit trail)
 
 Console & docs
