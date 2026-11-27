@@ -106,6 +106,10 @@ class Runtime:
     memo_overrides: dict[int, str] | None = None  # evaluation-only counterfactual (R4.2)
     # Harness screening of the alert's counterparties, in code (R3.4, ADR-03.10).
     screen_counterparties: bool = True
+    # Multi-account indicators + typology candidates (R3.15, ADR-03.11), and the gate that
+    # sends back a case leaving a candidate undecided.
+    typology_signals: bool = True
+    typology_gate: bool = True
 
     def ctx(self, evidence: dict[str, Evidence] | None = None) -> ToolContext:
         return ToolContext(
@@ -113,6 +117,7 @@ class Runtime:
             self.classification,
             EvidenceStore.from_dict(evidence or {}),
             memo_overrides=self.memo_overrides or {},
+            multi_account=self.typology_signals,
         )
 
     def llm_config(self, run_id: str, alert_id: str) -> Any:
@@ -223,6 +228,7 @@ def build_graph(rt: Runtime, checkpointer: BaseCheckpointSaver[Any] | None) -> A
             tool_budget=rt.tool_budget,
             alert_account=state["evidence"]["ev-001"].data.get("account_key"),
             required_steps=rt.required_steps,
+            typology_gate=rt.typology_signals and rt.typology_gate,
         )
         result = run_investigator(
             rt.models["investigator"],
