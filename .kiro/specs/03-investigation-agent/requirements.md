@@ -79,6 +79,13 @@ For a selected alert, a multi-agent system gathers evidence with read-only tools
 - IF Langfuse is not configured or unreachable THEN THE SYSTEM SHALL run unchanged, and the audit trail stays complete (constitution VI).
 - `observability.py` SHALL be the only module importing Langfuse.
 
+### R3.15 Multi-account typology evidence (deterministic candidates)
+**User story:** As an analyst, I want the shape of the money flow around the alerted account measured by code, so that a typology that involves several accounts is not missed because the alerted account looks ordinary on its own.
+- `detect_patterns` SHALL also return two-hop and chain indicators computed in SQL over DuckDB: scatter-gather seen from the source (receivers that re-converge on one destination) and from an intermediary (parallel intermediaries between one source and one destination), gather-scatter hub and feeder degrees, fan-in feeder (the receiver with the most senders), and amount-matched chains (forward and backward depth, cycle length through the account). Each indicator names at most one counterparty account (R3.9), and the output is deterministic.
+- THE SYSTEM SHALL turn these numbers into typology candidates with explicit rules from `config/typology.yaml` (framework-free, `core/typology_signals.py`). Thresholds SHALL be chosen on validation alerts only; the eval set is scored with frozen rules.
+- (Harness v2) WHEN the investigator submits a case that does not mark every candidate flagged on the alerted account as `CONFIRMED` or `REJECTED` with evidence THE SYSTEM SHALL send it back once with the undecided candidates, and audit the refusal. The LLM still decides each candidate. This SHALL add no LLM call when the case already decides every candidate, and at most one per run otherwise.
+- `finint eval typology-signals` SHALL report the per-typology recall and precision of the candidates against the ground truth, without LLM calls (the ceiling of code-supported typology hits).
+
 ### R3.13 Swappable LLM
 - THE SYSTEM SHALL build all chat models from config through one factory (`init_chat_model`), with the model set independently per agent role. Default: Gemini (Flash-Lite for investigator and media, Flash for reviewer), version-pinned. Any provider supported by `init_chat_model` (e.g. an open-weight model via Ollama) is a config change, not a code change.
 

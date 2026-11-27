@@ -34,3 +34,4 @@ Console & docs
 
 Evaluation follow-ups
 - [x] 3.22 Controlled typology vocabulary for hypotheses (`core/typology.py`, enum in `submit_case`, prompt line, alias normaliser) · _R3.1, R3.2_ · ADR-03.9
+- [x] 3.23 Multi-account typology evidence: two-hop and amount-matched chain indicators in `detect_patterns`, candidates from `config/typology.yaml` (`core/typology_signals.py`), typology gate in the investigator, skills and v2 prompt, offline ceiling `finint eval typology-signals` · _R3.15, R3.1, R3.2_ · ADR-03.11

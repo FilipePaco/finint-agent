@@ -34,6 +34,10 @@ Convention: every test references a requirement. **Every guardrail has at least 
 | `test_customer_surface_has_no_case_access` | no non-analyst route/role can read case files | R3.11 |
 | `test_audit_tamper_detected` | editing one stored event breaks `verify()` | R3.12 |
 | `test_runs_without_langfuse` | no credentials → callbacks `[]`, run completes, audit complete | R3.14 |
+| `test_undecided_candidate_is_refused_once_then_decided` | a case silent on a code-flagged typology candidate is sent back once and audited | R3.15 |
+| `test_gate_refuses_at_most_once` | the typology gate never loops: a second undecided submission is accepted | R3.15 |
+| `test_only_confirmed_or_rejected_with_evidence_counts_as_decided` | INCONCLUSIVE or evidence-free decisions leave a candidate open | R3.15 |
+| `test_missing_or_null_indicator_never_fires` | no number, no candidate | R3.15 |
 | `test_budget_exhaustion_yields_nmi` | tool budget hit → `NEEDS_MORE_INFO` with missing items | R3.1 |
 | `test_llm_unavailable_degrades` | model raises → deterministic evidence pack, `NEEDS_MORE_INFO` | R3.1 |
 
