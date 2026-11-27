@@ -114,6 +114,21 @@ def test_detect_patterns_sees_fan_out(env: dict[str, Any]) -> None:
     assert set(ev.data["cycles_through_account"]) == {"cycles_len2", "cycles_len3", "cycles_len4"}
 
 
+def test_detect_patterns_adds_multi_account_and_candidates_last(env: dict[str, Any]) -> None:
+    """R3.15: new keys come last (stable prefix); the v1 switch removes them entirely."""
+    from dataclasses import replace
+
+    args = (env["inj_account"], env["start"], env["day"])
+    ev = tools.detect_patterns(env["ctx"], *args)
+    assert list(ev.data)[-2:] == ["multi_account", "typology_candidates"]
+    for c in ev.data["typology_candidates"]:
+        assert set(c) == {"typology", "indicator", "observed", "rule"}
+    baseline = tools.detect_patterns(replace(env["ctx"], multi_account=False), *args)
+    assert "multi_account" not in baseline.data
+    assert "typology_candidates" not in baseline.data
+    assert ev.summary.startswith(baseline.summary[:-1])
+
+
 def test_trace_flows_and_counterparties(env: dict[str, Any]) -> None:
     flow = tools.trace_flows(
         env["ctx"], env["inj_account"], env["start"], env["day"], "out", hops=5
