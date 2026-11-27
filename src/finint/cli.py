@@ -439,6 +439,35 @@ def report_weekly() -> None:
     typer.echo(f"wrote {out}")
 
 
+@eval_app.command("typology-signals")
+def eval_typology_signals() -> None:
+    """Offline ceiling of the code typology candidates (no LLM): reports/typology_signals.md."""
+    from finint.config import load_yaml
+    from finint.eval.typology_signals import (
+        eval_set_alerts,
+        render,
+        score,
+        signal_rows,
+        validation_alerts,
+    )
+    from finint.tools.investigation import ToolContext
+
+    settings = get_settings()
+    classification = load_yaml("data_classification", settings.config_dir)["tables"]
+    splits = {
+        "Validation (tuning split)": validation_alerts(settings.duckdb_path),
+        "Eval set (held out, frozen rules)": eval_set_alerts(settings.config_dir.parent / EVAL_SET),
+    }
+    scores = {
+        name: score(signal_rows(ToolContext(settings.duckdb_path, classification), alerts))
+        for name, alerts in splits.items()
+    }
+    path = settings.reports_dir / "typology_signals.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render(scores), encoding="utf-8")
+    typer.echo(f"wrote {path}")
+
+
 @eval_app.command("record")
 def eval_record() -> None:
     """Record live Gemini responses on the synthetic world for the CI replay (needs a key)."""

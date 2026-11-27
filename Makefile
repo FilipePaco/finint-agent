@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 UV ?= uv
 
-.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify app eval-build eval eval-report report docs
+.PHONY: help install lint format typecheck test test-gnn check data features train alerts report-ml audit-verify app eval-build eval eval-signals eval-report report docs
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -58,6 +58,9 @@ eval-build: ## Build the evaluation set (spec 04)
 
 eval: ## Run the agent evaluation (needs GOOGLE_API_KEY; resumable)
 	$(UV) run finint eval run --config main
+
+eval-signals: ## Offline ceiling of the code typology candidates (no LLM)
+	$(UV) run finint eval typology-signals
 
 eval-report: ## Metrics and reports/eval_report.md from eval/results
 	$(UV) run finint eval report
