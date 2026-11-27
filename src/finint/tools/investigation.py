@@ -17,18 +17,21 @@ from __future__ import annotations
 
 import json
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
 import duckdb
 
+from finint.config import PROJECT_ROOT, load_yaml
 from finint.core.evidence import EvidenceStore
 from finint.core.injection import scan
 from finint.core.minimize import minimize_row, wrap_untrusted
 from finint.core.models import Evidence
+from finint.core.typology_signals import Rule, load_rules, typology_candidates
 
 MAX_WINDOW_DAYS = 14
 MAX_ROWS = 50
@@ -190,8 +193,104 @@ FROM transactions WHERE from_key = $k AND ts >= $s AND ts < $e
 """
 _FORMATS_SQL = """
 SELECT payment_format, count(*) AS n FROM transactions
-WHERE from_key = $k AND ts >= $s AND ts < $e GROUP BY 1 ORDER BY 2 DESC
+WHERE from_key = $k AND ts >= $s AND ts < $e GROUP BY 1 ORDER BY 2 DESC, 1
 """
+# Multi-account (two-hop) indicators, R3.15 / ADR-03.11. One literal query; `w` is the window.
+# * scatter-gather, account as source: the account's receivers that pay one same destination;
+# * scatter-gather, account as intermediary: accounts that, like this one, receive from one
+#   same source and pay one same destination (this account included);
+# * gather-scatter feeder: a receiver of the account that itself has many senders and receivers;
+# * fan-in feeder: the receiver of the account with the most distinct senders.
+_MULTI_SQL = """
+WITH w AS (
+    SELECT from_key AS a, to_key AS b, amount_usd AS amt FROM transactions
+    WHERE ts >= $s AND ts < $e AND from_key <> to_key
+),
+kout AS (SELECT b, sum(amt) AS amt FROM w WHERE a = $k GROUP BY 1),
+kin AS (SELECT DISTINCT a FROM w WHERE b = $k),
+r_in AS (
+    SELECT w.b AS h, count(DISTINCT w.a) AS senders FROM w JOIN kout ON w.b = kout.b GROUP BY 1
+),
+r_out AS (
+    SELECT w.a AS h, count(DISTINCT w.b) AS receivers FROM w JOIN kout ON w.a = kout.b
+    WHERE w.b <> $k GROUP BY 1
+),
+r AS (
+    SELECT r_in.h, r_in.senders, coalesce(r_out.receivers, 0) AS receivers
+    FROM r_in LEFT JOIN r_out USING (h)
+),
+cm AS (
+    SELECT DISTINCT w.b AS dest, kout.b AS mid, kout.amt FROM kout JOIN w ON w.a = kout.b
+    WHERE w.b <> $k AND w.b <> kout.b
+),
+conv AS (SELECT dest, count(*) AS n, sum(amt) AS amt FROM cm GROUP BY 1),
+sj AS (SELECT DISTINCT w.a AS s, w.b AS j FROM w JOIN kin ON w.a = kin.a WHERE w.b <> $k),
+jd AS (SELECT DISTINCT w.a AS j, w.b AS d FROM w JOIN kout ON w.b = kout.b WHERE w.a <> $k),
+par AS (
+    SELECT sj.s, jd.d, count(*) + 1 AS n FROM sj JOIN jd ON sj.j = jd.j
+    WHERE sj.s <> jd.d AND sj.s <> $k AND jd.d <> $k GROUP BY 1, 2
+),
+top_conv AS (SELECT * FROM conv ORDER BY n DESC, amt DESC, dest LIMIT 1),
+top_par AS (SELECT * FROM par ORDER BY n DESC, s, d LIMIT 1),
+top_hub AS (
+    SELECT h, least(senders, receivers) AS degree FROM r ORDER BY degree DESC, h LIMIT 1
+),
+top_fan_in AS (SELECT h, senders FROM r ORDER BY senders DESC, h LIMIT 1)
+SELECT
+  (SELECT sum(amt) FROM kout) AS total_out_usd,
+  (SELECT least(count(*), (SELECT count(*) FROM kin)) FROM kout) AS own_hub_degree,
+  (SELECT n FROM top_conv) AS src_n,
+  (SELECT dest FROM top_conv) AS src_dest,
+  (SELECT amt FROM top_conv) AS src_amt,
+  (SELECT n FROM top_par) AS mid_n,
+  (SELECT s FROM top_par) AS mid_source,
+  (SELECT d FROM top_par) AS mid_dest,
+  (SELECT degree FROM top_hub) AS hub_degree,
+  (SELECT h FROM top_hub) AS hub,
+  (SELECT senders FROM top_fan_in) AS fan_in_senders,
+  (SELECT h FROM top_fan_in) AS fan_in_receiver
+"""
+# One level of an amount-matched chain (layering, long cycles): from each frontier node, the
+# transfers that leave it after the money arrived (within CHAIN_MAX_DELAY) for a similar amount.
+_CHAIN_FWD_SQL = """
+WITH f AS (SELECT unnest($nodes) AS node, unnest($amts) AS amt, unnest($times) AS t)
+SELECT x.to_key AS node, x.amount_usd::DOUBLE AS amt, x.ts AS t
+FROM f JOIN transactions x ON x.from_key = f.node
+WHERE x.ts > f.t AND x.ts <= f.t + to_hours($delay) AND x.ts >= $s AND x.ts < $e
+  AND x.to_key <> x.from_key
+  AND x.amount_usd BETWEEN $lo * f.amt AND $hi * f.amt
+ORDER BY x.ts, node, amt LIMIT $cap
+"""
+_CHAIN_BWD_SQL = """
+WITH f AS (SELECT unnest($nodes) AS node, unnest($amts) AS amt, unnest($times) AS t)
+SELECT x.from_key AS node, x.amount_usd::DOUBLE AS amt, x.ts AS t
+FROM f JOIN transactions x ON x.to_key = f.node
+WHERE x.ts < f.t AND x.ts >= f.t - to_hours($delay) AND x.ts >= $s AND x.ts < $e
+  AND x.to_key <> x.from_key
+  AND f.amt BETWEEN $lo * x.amount_usd AND $hi * x.amount_usd
+ORDER BY x.ts DESC, node, amt LIMIT $cap
+"""
+_CHAIN_START_SQL = {
+    "out": """
+SELECT to_key AS node, amount_usd::DOUBLE AS amt, ts AS t FROM transactions
+WHERE from_key = $k AND ts >= $s AND ts < $e AND to_key <> from_key
+ORDER BY amount_usd DESC, ts, node LIMIT $cap
+""",
+    "in": """
+SELECT from_key AS node, amount_usd::DOUBLE AS amt, ts AS t FROM transactions
+WHERE to_key = $k AND ts >= $s AND ts < $e AND to_key <> from_key
+ORDER BY amount_usd DESC, ts, node LIMIT $cap
+""",
+}
+CHAIN_MAX_DELAY_HOURS = 72
+CHAIN_AMOUNT_BAND = (0.8, 1.2)  # next hop amount / previous hop amount
+CHAIN_FRONTIER = 25
+CHAIN_MAX_DEPTH = {"out": 10, "in": 5}
+
+
+@lru_cache(maxsize=1)
+def default_rules() -> tuple[Rule, ...]:
+    return tuple(load_rules(load_yaml("typology", PROJECT_ROOT / "config")))
 
 
 @dataclass
@@ -201,6 +300,13 @@ class ToolContext:
     store: EvidenceStore = field(default_factory=EvidenceStore)
     # Evaluation only: replace stored memos by txn_id (paired prompt-injection runs, R4.2).
     memo_overrides: Mapping[int, str] = field(default_factory=dict)
+    # Multi-account indicators and typology candidates in detect_patterns (R3.15); the v1
+    # baseline turns them off to stay comparable with its recorded results.
+    multi_account: bool = True
+    typology_rules: Sequence[Rule] | None = None  # default: config/typology.yaml
+
+    def candidate_rules(self) -> Sequence[Rule]:
+        return self.typology_rules if self.typology_rules is not None else default_rules()
 
     def connect(self) -> duckdb.DuckDBPyConnection:
         return duckdb.connect(str(self.db_path), read_only=True)
@@ -440,8 +546,114 @@ def trace_flows(
     return ctx.store.add("trace_flows", args, data)
 
 
+def _chain(
+    con: duckdb.DuckDBPyConnection,
+    account_key: str,
+    s: datetime,
+    e: datetime,
+    direction: Literal["in", "out"],
+) -> tuple[dict[str, int], int | None]:
+    """Amount-matched chain from (``out``) or into (``in``) the account, level by level.
+
+    Level 1 is the account's own transfers; each next level keeps only transfers that follow
+    (``out``) or precede (``in``) the previous hop within ``CHAIN_MAX_DELAY_HOURS`` for an
+    amount within ``CHAIN_AMOUNT_BAND``. Bounded: ``CHAIN_FRONTIER`` rows per level,
+    ``CHAIN_MAX_DEPTH`` levels. Returns the first level at which each account was reached
+    and the level at which the chain came back to the account itself (if it did).
+    """
+    lo, hi = CHAIN_AMOUNT_BAND
+    base = {"s": s, "e": e, "cap": CHAIN_FRONTIER}
+    frontier = _rows(con, _CHAIN_START_SQL[direction], {**base, "k": account_key})
+    sql = _CHAIN_FWD_SQL if direction == "out" else _CHAIN_BWD_SQL
+    levels: dict[str, int] = {}
+    back_home: int | None = None
+    level = 1
+    while frontier:
+        if level > 1 and back_home is None and any(r["node"] == account_key for r in frontier):
+            back_home = level
+        fresh: dict[str, dict[str, Any]] = {}
+        for r in frontier:
+            if r["node"] != account_key and r["node"] not in levels and r["node"] not in fresh:
+                fresh[r["node"]] = r
+        if not fresh:
+            break
+        levels.update(dict.fromkeys(fresh, level))
+        if level >= CHAIN_MAX_DEPTH[direction]:
+            break
+        level += 1
+        frontier = _rows(
+            con,
+            sql,
+            {
+                **base,
+                "nodes": list(fresh),
+                "amts": [float(r["amt"]) for r in fresh.values()],
+                "times": [r["t"] for r in fresh.values()],
+                "delay": CHAIN_MAX_DELAY_HOURS,
+                "lo": lo,
+                "hi": hi,
+            },
+        )
+    return levels, back_home
+
+
+def _cycle_length(
+    forward: dict[str, int], backward: dict[str, int], home: int | None
+) -> int | None:
+    """Shortest amount-matched cycle through the account.
+
+    In a time-ordered cycle v0 -> ... -> v0 the account is usually in the middle: the money
+    reaches the first node v0 again going forward, and v0 is also where it came from going
+    backward. So a node met by both chains closes a cycle of forward + backward hops; a
+    forward chain that comes back to the account itself is a cycle starting at the account.
+    """
+    met = [forward[n] + backward[n] for n in forward.keys() & backward.keys()]
+    lengths = [*met, *([home] if home else [])]
+    return min(lengths) if lengths else None
+
+
+def multi_account_indicators(
+    con: duckdb.DuckDBPyConnection, account_key: str, s: datetime, e: datetime
+) -> dict[str, Any]:
+    """Two-hop and chain indicators of multi-account typologies (R3.15, ADR-03.11).
+
+    Counts and ratios, plus at most one counterparty account per indicator (the one that
+    makes the number), so the output stays small and minimal (R3.9).
+    """
+    m = _rows(con, _MULTI_SQL, {"k": account_key, "s": s, "e": e})[0]
+    forward, home = _chain(con, account_key, s, e, "out")
+    backward, _ = _chain(con, account_key, s, e, "in")
+    total_out = float(m["total_out_usd"] or 0)
+    share = round(float(m["src_amt"] or 0) / total_out, 3) if total_out and m["src_n"] else None
+    return {
+        "scatter_gather_source": {
+            "converging_intermediaries": m["src_n"] or 0,
+            "destination": m["src_dest"],
+            "share_of_outflow_converging": share,
+        },
+        "scatter_gather_intermediary": {
+            "parallel_intermediaries": m["mid_n"] or 0,
+            "source": m["mid_source"],
+            "destination": m["mid_dest"],
+        },
+        "gather_scatter_hub": {"hub_degree": m["own_hub_degree"] or 0},
+        "gather_scatter_feeder": {"hub_degree": m["hub_degree"] or 0, "hub": m["hub"]},
+        "fan_in_feeder": {
+            "receiver_distinct_senders": m["fan_in_senders"] or 0,
+            "receiver": m["fan_in_receiver"],
+        },
+        "amount_matched_chain": {
+            "forward_depth": max(forward.values(), default=0),
+            "backward_depth": max(backward.values(), default=0),
+            "cycle_length": _cycle_length(forward, backward, home),
+        },
+    }
+
+
 def detect_patterns(ctx: ToolContext, account_key: str, start: str, end: str) -> Evidence:
-    """Code-computed typology indicators: fan-in/out, cycles, flow-through, structuring.
+    """Code-computed typology indicators: fan-in/out, cycles, flow-through, structuring,
+    multi-account shapes (scatter-gather, gather-scatter, fan-in feeder, amount-matched
+    chains) and the typology candidates they support (R3.15, ADR-03.11).
 
     The agent tests its hypotheses against these numbers instead of estimating them.
     """
@@ -458,6 +670,7 @@ def detect_patterns(ctx: ToolContext, account_key: str, start: str, end: str) ->
         flow = one(_FLOW_THROUGH_SQL)
         structuring = one(_STRUCTURING_SQL)
         formats = _rows(con, _FORMATS_SQL, params)
+        multi = multi_account_indicators(con, account_key, s, e) if ctx.multi_account else None
     receivers, senders = fan["distinct_receivers"] or 0, fan["distinct_senders"] or 0
     total_in, total_out = fan["total_in_usd"] or 0, fan["total_out_usd"] or 0
     ratio = round(float(total_out) / float(total_in), 3) if total_in else None
@@ -476,5 +689,20 @@ def detect_patterns(ctx: ToolContext, account_key: str, start: str, end: str) ->
         "payment_formats_out": formats,
         "thresholds_note": "just-under-10k = amount_usd in [9000, 10000)",
     }
+    if multi is not None:
+        # New keys go last, so the earlier part of the summary the agent sees is unchanged.
+        data["multi_account"] = multi
+        candidates = typology_candidates(
+            {"fan": data["fan"], "cycles": cycles, "multi": multi}, ctx.candidate_rules()
+        )
+        data["typology_candidates"] = [
+            {
+                "typology": c.typology,
+                "indicator": c.indicator,
+                "observed": c.observed,
+                "rule": c.rule,
+            }
+            for c in candidates
+        ]
     args = {"account_key": account_key, "start": start, "end": end}
     return ctx.store.add("detect_patterns", args, data)

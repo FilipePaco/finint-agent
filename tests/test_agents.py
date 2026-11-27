@@ -147,7 +147,15 @@ def _submit(amount: str | None = None, disposition: str = "ESCALATE") -> Any:
         total = amount or data["fan"]["total_out_usd"]
         case = {
             "summary": "Fan-out of funds to several new counterparties shortly after inflows.",
-            "hypotheses": [{"typology": "FAN-OUT", "status": "CONFIRMED", "evidence_ids": [ev_id]}],
+            "hypotheses": [
+                {"typology": "FAN-OUT", "status": "CONFIRMED", "evidence_ids": [ev_id]},
+                # Decide every code-flagged candidate, as the typology gate requires (R3.15).
+                *(
+                    {"typology": c["typology"], "status": "REJECTED", "evidence_ids": [ev_id]}
+                    for c in data.get("typology_candidates", [])
+                    if c["typology"] != "fan-out"
+                ),
+            ],
             "findings": [
                 {
                     "claim": f"Outflows totalled {total} USD in the window.",

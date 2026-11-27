@@ -23,11 +23,13 @@ from pydantic import BaseModel, Field, ValidationError
 from finint.agents.media_agent import tool_spec
 from finint.core.audit import AuditLog, NewEvent
 from finint.core.models import CaseFile, Evidence
+from finint.core.typology_signals import undecided_candidates
 from finint.tools import investigation as inv
 from finint.tools.skills import SkillLibrary, UnknownSkillError
 
 DEFAULT_TOOL_BUDGET = 20
 MAX_SUBMIT_ATTEMPTS = 3
+TYPOLOGY_GATE_PREFIX = "ERROR: typology candidates not decided"
 
 
 class AccountArgs(BaseModel):
@@ -69,7 +71,10 @@ DESCRIPTIONS = {
     "get_transactions": "Transactions of an account in a window with exact totals (largest first).",
     "get_counterparties": "Counterparties by volume in a window, with counts and totals.",
     "trace_flows": "Multi-hop money flow out of or into an account (max 3 hops, time-ordered).",
-    "detect_patterns": "Code-computed indicators: fan-in/out, cycles, flow-through, structuring.",
+    "detect_patterns": (
+        "Code-computed indicators: fan-in/out, cycles, flow-through, structuring, multi-account "
+        "shapes, and the typology candidates they support."
+    ),
     "screen_sanctions": "Screen the account owner against OFAC SDN. Status is decided by code.",
     "request_media_check": "Adverse-media check of the account owner (only test entities allowed).",
     "load_skill": "Load an investigation playbook by name (see the skills list).",
@@ -101,6 +106,8 @@ class InvestigatorDeps:
     # Harness v2: tools that must have run on the alerted account before a case is accepted.
     alert_account: str | None = None
     required_steps: tuple[str, ...] = ()
+    # R3.15: every code-flagged typology candidate must be decided before a case is accepted.
+    typology_gate: bool = False
 
 
 @dataclass
@@ -173,6 +180,44 @@ def missing_steps(deps: InvestigatorDeps) -> list[str]:
     return [t for t in deps.required_steps if (t, deps.alert_account) not in done]
 
 
+def flagged_candidates(deps: InvestigatorDeps) -> dict[str, list[str]]:
+    """Typology candidates from ``detect_patterns`` on the alerted account -> evidence ids."""
+    out: dict[str, list[str]] = {}
+    for e in deps.ctx.store:
+        if e.tool == "detect_patterns" and e.args.get("account_key") == deps.alert_account:
+            for c in e.data.get("typology_candidates", []):
+                out.setdefault(c["typology"], []).append(e.evidence_id)
+    return out
+
+
+def typology_gaps(
+    deps: InvestigatorDeps, case: CaseFile, messages: list[BaseMessage]
+) -> str | None:
+    """The refusal text if flagged candidates are not CONFIRMED/REJECTED (typology gate).
+
+    Refuses at most once per run (the refusal stays in the messages across re-entries), so it
+    costs at most one extra model turn and can never loop.
+    """
+    if not deps.typology_gate or deps.alert_account is None:
+        return None
+    if any(
+        isinstance(m, ToolMessage) and str(m.content).startswith(TYPOLOGY_GATE_PREFIX)
+        for m in messages
+    ):
+        return None
+    flagged = flagged_candidates(deps)
+    gaps = undecided_candidates(flagged, case.hypotheses)
+    if not gaps:
+        return None
+    listed = ", ".join(f"{t} ({', '.join(sorted(set(flagged[t])))})" for t in gaps)
+    return (
+        f"{TYPOLOGY_GATE_PREFIX}: {listed}. detect_patterns flagged these from code-computed "
+        "multi-account indicators (see typology_candidates). Add one hypothesis per candidate, "
+        "CONFIRMED or REJECTED, citing that evidence id and the numbers that decide it "
+        "(trace_flows or get_counterparties if you need more), then call submit_case again."
+    )
+
+
 def _submit(args: dict[str, Any], alert_id: str) -> CaseFile | str:
     try:
         return CaseFile.model_validate({**args, "alert_id": alert_id})
@@ -235,7 +280,26 @@ def run_investigator(
                     )
                     continue
                 result = _submit(call["args"], deps.alert_id)
-                if isinstance(result, CaseFile):
+                refusal = (
+                    typology_gaps(deps, result, messages)
+                    if isinstance(result, CaseFile) and used < deps.tool_budget
+                    else None
+                )
+                if refusal is not None:
+                    _audit(
+                        deps,
+                        "TOOL_CALL",
+                        {
+                            "tool": "submit_case",
+                            "rejected": "typology gate",
+                            "undecided": undecided_candidates(
+                                flagged_candidates(deps),
+                                result.hypotheses if isinstance(result, CaseFile) else [],
+                            ),
+                        },
+                    )
+                    messages.append(ToolMessage(refusal, tool_call_id=call_id))
+                elif isinstance(result, CaseFile):
                     draft = result
                     messages.append(ToolMessage("case received", tool_call_id=call_id))
                 else:

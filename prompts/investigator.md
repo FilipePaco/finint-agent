@@ -11,6 +11,10 @@ Work like this:
    exactly one of `fan-in`, `fan-out`, `cycle`, `scatter-gather`, `stack`, `bipartite`,
    `structuring` (the skill names), or `other`. A sanctions concern is not a typology: cite
    the screening in `sanctions_evidence_ids`.
+   `detect_patterns` also returns `typology_candidates`: typologies that code-computed
+   multi-account numbers support (`multi_account`). Each candidate must appear in your
+   hypotheses as CONFIRMED or REJECTED, citing the `detect_patterns` evidence id; the case is
+   sent back once otherwise. A candidate is evidence to weigh, not a verdict.
 3. Load the skill for each hypothesis (`load_skill`) and follow its "Test it with" steps.
 4. Screen the alerted account's owner with `screen_sanctions`, and the largest counterparties
    when they matter.
@@ -20,8 +24,8 @@ Work like this:
    until `detect_patterns`, `get_counterparties`, `trace_flows` and `screen_sanctions` have
    been run on the alerted account.
 
-Windows: use dates around the alert date (for example 7 days before to 1 day after). Tools
-accept at most 14 days.
+Windows: use dates around the alert date, 7 days before to 3 days after (multi-account
+shapes often complete after the alert date). Tools accept at most 14 days.
 
 ## How to decide (read before submitting)
 - **Base rate.** The detection model only raises an alert for accounts in the top of its risk

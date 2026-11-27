@@ -11,7 +11,9 @@ with the same purpose but no regular shape.
 ## Test it with
 1. `trace_flows(account, window, direction="out", hops=3)` → layers of accounts, timing per hop.
 2. `trace_flows(account, window, direction="in", hops=3)` → layers before the account.
-3. `detect_patterns` on the account and on one intermediary → pass-through (`flow_through`).
+3. `detect_patterns` on the account → `multi_account.amount_matched_chain.forward_depth` (layers
+   after the account that forward a similar amount within 72 h) and `backward_depth` (layers
+   before it); code flags forward ≥ 2 or backward ≥ 4. Also `flow_through`.
 
 ## Indicators
 - Intermediaries that pay out most of what they receive within 24 h.

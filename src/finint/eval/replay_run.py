@@ -25,6 +25,10 @@ from finint.tools.skills import SkillLibrary
 ROOT = Path(__file__).resolve().parents[3]
 CASSETTE = ROOT / "eval" / "cassettes" / "synthetic.json"
 ROLES = ("investigator", "reviewer", "media")
+# The cassette predates the typology gate (task 3.23, ADR-03.11): a refusal needs a model turn
+# that was never recorded. Set to True and re-record (`finint eval record`) when quota allows;
+# record and replay must use the same value.
+TYPOLOGY_GATE_IN_CASSETTE = False
 
 
 def replay_runtime(settings: Settings, cassette: Cassette, live: dict[str, Any] | None) -> Runtime:
@@ -48,6 +52,7 @@ def replay_runtime(settings: Settings, cassette: Cassette, live: dict[str, Any] 
             "media": "gemini-3.5-flash-lite",
         },
         prompts={role: load_prompt(role) for role in ROLES},
+        typology_gate=TYPOLOGY_GATE_IN_CASSETTE,
     )
 
 

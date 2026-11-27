@@ -8,12 +8,16 @@ description: Funds leave an account and return to it through a chain of accounts
 the appearance of legitimate turnover.
 
 ## Test it with
-1. `detect_patterns(account, window)` → `cycles_through_account.cycles_len2/3/4`.
+1. `detect_patterns(account, window)` → `cycles_through_account.cycles_len2/3/4` (any edges) and
+   `multi_account.amount_matched_chain.cycle_length`: a time-ordered chain of similar amounts
+   (each hop within 72 h, ±20 %) that comes back through the account, up to ~12 hops, also
+   when the account sits mid-cycle. Use a window of 7 days before to 3 days after the alert.
 2. `trace_flows(account, window, direction="out", hops=3)` → `returns_to_origin`, the path, amounts per hop.
 3. `get_transactions` on intermediate accounts if needed (amounts shrinking slightly each hop = fees skimmed).
 
 ## Indicators
-- Any directed cycle of length 2–4 within the window, especially with similar amounts.
+- An amount-matched `cycle_length` (code flags any up to 12), or a directed cycle of length
+  2–4 with similar amounts.
 - Cross-bank or cross-currency hops; short time between hops.
 
 ## Benign explanations to rule out
