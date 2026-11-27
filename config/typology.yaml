@@ -1,0 +1,37 @@
+# Typology candidate rules (R3.15, ADR-03.11). Code flags a candidate; the agent decides it.
+# A typology is a candidate when any of its rules fires (min: value >= min; max: value <= max).
+# Indicator paths point into detect_patterns: fan.*, cycles.* and multi.* (= multi_account.*).
+# Thresholds were chosen on the VALIDATION alerts only (562 alerts, 2022-09-06..08, window
+# alert date -7 / +3 days), by grid search of each typology's OR-rule for the best F1 against
+# the AMLworld pattern labels. The eval set was not used to choose them.
+# The first rule that fires is the one reported to the agent, so the most precise goes first.
+# Not flagged by code: bipartite (HI-Small's BIPARTITE attempts are disjoint sender/receiver
+# pairs, so the shape is not visible from the alerted account) and structuring (no labels).
+rules:
+  - typology: scatter-gather   # the account is one of >= N parallel intermediaries S -> * -> D
+    indicator: multi.scatter_gather_intermediary.parallel_intermediaries
+    min: 5
+  - typology: scatter-gather   # gather-scatter hub: the account itself has many in and many out
+    indicator: multi.gather_scatter_hub.hub_degree
+    min: 7
+  - typology: scatter-gather   # gather-scatter feeder: it pays a hub with many in and many out
+    indicator: multi.gather_scatter_feeder.hub_degree
+    min: 7
+  - typology: scatter-gather   # the account's receivers re-converge on one destination
+    indicator: multi.scatter_gather_source.converging_intermediaries
+    min: 2
+  - typology: cycle            # amount-matched, time-ordered chain back through the account
+    indicator: multi.amount_matched_chain.cycle_length
+    max: 12
+  - typology: fan-in           # the account pays a receiver that collects from many senders
+    indicator: multi.fan_in_feeder.receiver_distinct_senders
+    min: 11
+  - typology: fan-out
+    indicator: fan.distinct_receivers
+    min: 15
+  - typology: stack            # a receiver forwards a similar amount within 72 h
+    indicator: multi.amount_matched_chain.forward_depth
+    min: 2
+  - typology: stack            # money reached the account through >= 4 amount-matched hops
+    indicator: multi.amount_matched_chain.backward_depth
+    min: 4
